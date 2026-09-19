@@ -19,7 +19,7 @@
     --line:rgba(45,62,49,0.1);
   }
   *{box-sizing:border-box;}
-  html{scroll-behavior:smooth; scroll-padding-top:90px;}
+  html{scroll-behavior:smooth; scroll-padding-top:80px;}
   body{
     margin:0;
     background:var(--cream);
@@ -45,6 +45,13 @@
     position:sticky;
     top:0;
     z-index:40;
+    padding:12px 32px;
+    transition:padding 0.3s ease-out;
+    will-change:padding;
+    overflow-anchor:none;
+  }
+  header.scrolled{
+    padding:6px 32px;
   }
   .navbar{
     display:flex;
@@ -65,16 +72,23 @@
     display:flex;
     align-items:center;
   }
-  .logo-area img{
-    transition:max-height 0.3s ease;
+  .logo-full{
+    max-height:140px;
+    width:auto;
+    display:block;
+  }
+  .logo-compact{
+    max-height:60px;
+    width:auto;
+    display:none;
+  }
+  header.scrolled .logo-full{
+    display:none;
+  }
+  header.scrolled .logo-compact{
+    display:block;
   }
   .logo-mark{width:48px; height:48px;}
-  header.scrolled .navbar{
-    padding:8px 32px;
-  }
-  header.scrolled .logo-area img{
-    max-height:60px !important;
-  }
   nav ul{list-style:none; display:flex; gap:40px; margin:0; padding:0;}
   nav a{text-decoration:none; opacity:0.75; transition:opacity 0.2s;}
   nav a:hover{opacity:1;}
@@ -489,7 +503,8 @@
   <div class="navbar">
     <div class="logo-area">
       <a href="#" style="display:flex; align-items:center; text-decoration:none;">
-        <img src="Logo_Main_-_Colour-removebg-preview.png" alt="Do Good Party Box" style="max-height: 140px; width: auto; cursor:pointer;">
+        <img src="Logo_Main_-_Colour-removebg-preview.png" alt="Do Good Party Box" class="logo-full" style="cursor:pointer;">
+        <img src="Favicon - Colour.jpg" alt="Do Good Party Box" class="logo-compact" style="cursor:pointer; border-radius:50%;">
       </a>
     </div>
     <nav>
@@ -694,10 +709,13 @@
 
   // Scroll shrink effect for header
   const header = document.querySelector('header');
+  let headerCompact = false;
   window.addEventListener('scroll', () => {
-    if (window.scrollY > 50) {
+    if (!headerCompact && window.scrollY > 50) {
+      headerCompact = true;
       header.classList.add('scrolled');
-    } else {
+    } else if (headerCompact && window.scrollY < 30) {
+      headerCompact = false;
       header.classList.remove('scrolled');
     }
   });
