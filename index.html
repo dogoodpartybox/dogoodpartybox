@@ -81,17 +81,23 @@
   .logo-area img{
     max-height:140px;
     width:auto;
+  }
+  .logo-full{
     display:block;
   }
-  header.scrolled .logo-area img{
+  .logo-compact{
     display:none;
+    max-height:60px;
+  }
+  header.scrolled .logo-full{
+    display:none;
+  }
+  header.scrolled .logo-compact{
+    display:block;
   }
   nav ul{list-style:none; display:flex; gap:40px; margin:0; padding:0;}
   nav a{text-decoration:none; opacity:0.75; transition:opacity 0.2s;}
   nav a:hover{opacity:1;}
-  header.scrolled nav a{
-    font-size:0.8rem;
-  }
   .cta-header{
     background:var(--primary);
     color:var(--white);
@@ -103,10 +109,6 @@
     transition:background 0.2s;
   }
   .cta-header:hover{background:var(--secondary);}
-  header.scrolled .cta-header{
-    padding:8px 16px;
-    font-size:0.75rem;
-  }
 
   /* HERO */
   .hero{
@@ -465,11 +467,6 @@
 
   @media (max-width: 900px){
     nav ul{display:none;}
-    header.scrolled nav ul{
-      display:flex;
-      gap:20px;
-      font-size:0.85rem;
-    }
     .cycle-grid{grid-template-columns:repeat(2,1fr); gap:30px;}
     .cycle-arrow{display:none;}
     .kit-header, .booking-container{grid-template-columns:1fr;}
@@ -484,10 +481,6 @@
     .form-row input{
       padding:10px 12px;
       font-size:16px;
-    }
-    header.scrolled .cta-header{
-      font-size:0.7rem;
-      padding:6px 12px;
     }
   }
 
@@ -527,7 +520,8 @@
   <div class="navbar">
     <div class="logo-area">
       <a href="#" style="display:flex; align-items:center; text-decoration:none;">
-        <img src="Logo_Main_-_Colour-removebg-preview.png" alt="Do Good Party Box" style="cursor:pointer;">
+        <img src="Logo_Main_-_Colour-removebg-preview.png" alt="Do Good Party Box" class="logo-full" style="cursor:pointer;">
+        <img src="Favicon - Colour.jpg" alt="Do Good Party Box" class="logo-compact" style="cursor:pointer; border-radius:50%;">
       </a>
     </div>
     <nav>
