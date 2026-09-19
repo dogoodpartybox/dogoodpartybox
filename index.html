@@ -74,11 +74,10 @@
     max-height:140px;
     width:auto;
     transform-origin:left center;
-    transition:max-height 0.25s ease-out, transform 0.25s ease-out;
+    transition:transform 0.25s ease-out;
   }
   header.scrolled .logo-area img{
-    max-height:60px;
-    transform:scale(1);
+    transform:scale(0.5);
   }
   nav ul{list-style:none; display:flex; gap:40px; margin:0; padding:0;}
   nav a{text-decoration:none; opacity:0.75; transition:opacity 0.2s, font-size 0.25s ease-out;}
@@ -411,6 +410,12 @@
     gap:16px;
   }
   .form-row-double .form-row{margin-bottom:0;}
+  @media (max-width: 600px){
+    .form-row-double{
+      grid-template-columns:1fr;
+      gap:20px;
+    }
+  }
   .form-wrapper button{
     width:100%;
     margin-top:24px;
@@ -676,6 +681,13 @@
           <label>Contact email</label>
           <input type="email" id="email" placeholder="you@example.com">
         </div>
+        <div id="servicesSummary" style="margin-bottom:20px; padding:14px; background:var(--light); border-radius:8px; font-size:0.9rem; display:none;">
+          <strong>Your selections:</strong><br>
+          <span id="washingChoice"></span><br>
+          <span id="deliveryChoice"></span>
+        </div>
+        <input type="hidden" id="washingService">
+        <input type="hidden" id="deliveryService">
         <button class="btn-primary" type="button">Confirm booking</button>
         <p class="secure-note">Secure payment taken at checkout</p>
       </div>
@@ -722,6 +734,48 @@
     } else if (headerCompact && window.scrollY < 40) {
       headerCompact = false;
       header.classList.remove('scrolled');
+    }
+  });
+
+  // Services selection tracking
+  let selectedWashing = 'Rinse it yourself';
+  let selectedDelivery = 'Collect yourself';
+
+  document.querySelectorAll('.option-card').forEach(card => {
+    card.addEventListener('click', function(e) {
+      e.preventDefault();
+      const parent = this.parentElement;
+      
+      // Determine if this is a washing or delivery card
+      const content = this.querySelector('.content h3').textContent;
+      const isWashing = content.includes('Wash') || content.includes('washing');
+      
+      // Toggle active state for this card only within its group
+      parent.querySelectorAll('.option-card').forEach(sibling => {
+        sibling.classList.remove('active');
+      });
+      this.classList.add('active');
+      
+      // Update tracking based on card content
+      if (isWashing) {
+        selectedWashing = content.includes('We wash') ? 'We wash it (£5)' : 'Rinse it yourself (free)';
+        document.getElementById('washingService').value = selectedWashing;
+        document.getElementById('washingChoice').textContent = 'Washing: ' + selectedWashing;
+      } else {
+        selectedDelivery = content.includes('We deliver') ? 'We deliver (£5–£10)' : 'Collect yourself (free)';
+        document.getElementById('deliveryService').value = selectedDelivery;
+        document.getElementById('deliveryChoice').textContent = 'Delivery: ' + selectedDelivery;
+      }
+      
+      // Show summary if either has been selected
+      if (selectedWashing || selectedDelivery) {
+        document.getElementById('servicesSummary').style.display = 'block';
+      }
+    });
+
+    // Set initial active states to capture default selections
+    if (this.classList.contains('active')) {
+      this.click();
     }
   });
 </script>
