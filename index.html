@@ -53,6 +53,14 @@
   header.scrolled{
     padding:2px 32px;
   }
+  @media (max-width: 900px){
+    header{
+      padding:12px 32px;
+    }
+    header.scrolled{
+      padding:4px 32px;
+    }
+  }
   .navbar{
     display:flex;
     align-items:center;
@@ -323,15 +331,10 @@
   }
   .option-card{
     background:var(--white);
-    border:2px solid var(--line);
+    border:1px solid var(--line);
     border-radius:16px;
-    padding:40px;
-    cursor:pointer;
-    transition:all 0.2s;
-  }
-  .option-card.active{
-    border-color:var(--primary);
-    background:#F8FAF9;
+    padding:28px;
+    cursor:default;
   }
   .option-card h3{
     font-size:1.2rem;
@@ -629,19 +632,19 @@
       <h2>Choose your way</h2>
     </div>
     <div class="options-grid">
-      <div class="option-card active" onclick="selectOption(this, 'wash')">
+      <div class="option-card">
         <h3>Washing up <span class="option-tag">Free</span></h3>
         <p>Rinse it yourself, pack it back in the box we delivered</p>
       </div>
-      <div class="option-card" onclick="selectOption(this, 'wash')">
+      <div class="option-card">
         <h3>We wash it <span class="option-tag">£5</span></h3>
         <p>Leave it as is. We'll handle the washing and packing</p>
       </div>
-      <div class="option-card active" onclick="selectOption(this, 'delivery')">
+      <div class="option-card">
         <h3>Collect <span class="option-tag">Free</span></h3>
         <p>Pick up from our location, drop off yourself</p>
       </div>
-      <div class="option-card" onclick="selectOption(this, 'delivery')">
+      <div class="option-card">
         <h3>We deliver <span class="option-tag">£5–£10</span></h3>
         <p>Depends on your distance from us. We'll confirm at booking</p>
       </div>
@@ -681,13 +684,22 @@
           <label>Contact email</label>
           <input type="email" id="email" placeholder="you@example.com">
         </div>
-        <div id="servicesSummary" style="margin-bottom:20px; padding:14px; background:var(--light); border-radius:8px; font-size:0.9rem; display:none;">
-          <strong>Your selections:</strong><br>
-          <span id="washingChoice"></span><br>
-          <span id="deliveryChoice"></span>
+        <div class="form-row">
+          <label>Washing service</label>
+          <select id="washingService" required>
+            <option value="">Select an option</option>
+            <option value="Rinse it yourself (free)">Rinse it yourself (free)</option>
+            <option value="We wash it (£5)">We wash it (£5)</option>
+          </select>
         </div>
-        <input type="hidden" id="washingService">
-        <input type="hidden" id="deliveryService">
+        <div class="form-row">
+          <label>Delivery or collection</label>
+          <select id="deliveryService" required>
+            <option value="">Select an option</option>
+            <option value="Collect yourself (free)">Collect yourself (free)</option>
+            <option value="We deliver (£5–£10)">We deliver (£5–£10)</option>
+          </select>
+        </div>
         <button class="btn-primary" type="button">Confirm booking</button>
         <p class="secure-note">Secure payment taken at checkout</p>
       </div>
@@ -705,7 +717,7 @@
       </div>
       <div class="footer-col">
         <h3>Get in touch</h3>
-        <p>hello@dogoodpartybox.co.uk</p>
+        <p><a href="mailto:hello@dogoodpartybox.co.uk">hello@dogoodpartybox.co.uk</a></p>
         <p>Serving Colchester, Essex and surrounding areas</p>
       </div>
     </div>
@@ -716,14 +728,6 @@
 </footer>
 
 <script>
-  function selectOption(el, type){
-    const parent = el.parentElement;
-    parent.querySelectorAll('.option-card').forEach(card => {
-      if(card.parentElement === parent) card.classList.remove('active');
-    });
-    el.classList.add('active');
-  }
-
   // Scroll shrink effect for header
   const header = document.querySelector('header');
   let headerCompact = false;
@@ -734,48 +738,6 @@
     } else if (headerCompact && window.scrollY < 40) {
       headerCompact = false;
       header.classList.remove('scrolled');
-    }
-  });
-
-  // Services selection tracking
-  let selectedWashing = 'Rinse it yourself';
-  let selectedDelivery = 'Collect yourself';
-
-  document.querySelectorAll('.option-card').forEach(card => {
-    card.addEventListener('click', function(e) {
-      e.preventDefault();
-      const parent = this.parentElement;
-      
-      // Determine if this is a washing or delivery card
-      const content = this.querySelector('.content h3').textContent;
-      const isWashing = content.includes('Wash') || content.includes('washing');
-      
-      // Toggle active state for this card only within its group
-      parent.querySelectorAll('.option-card').forEach(sibling => {
-        sibling.classList.remove('active');
-      });
-      this.classList.add('active');
-      
-      // Update tracking based on card content
-      if (isWashing) {
-        selectedWashing = content.includes('We wash') ? 'We wash it (£5)' : 'Rinse it yourself (free)';
-        document.getElementById('washingService').value = selectedWashing;
-        document.getElementById('washingChoice').textContent = 'Washing: ' + selectedWashing;
-      } else {
-        selectedDelivery = content.includes('We deliver') ? 'We deliver (£5–£10)' : 'Collect yourself (free)';
-        document.getElementById('deliveryService').value = selectedDelivery;
-        document.getElementById('deliveryChoice').textContent = 'Delivery: ' + selectedDelivery;
-      }
-      
-      // Show summary if either has been selected
-      if (selectedWashing || selectedDelivery) {
-        document.getElementById('servicesSummary').style.display = 'block';
-      }
-    });
-
-    // Set initial active states to capture default selections
-    if (this.classList.contains('active')) {
-      this.click();
     }
   });
 </script>
