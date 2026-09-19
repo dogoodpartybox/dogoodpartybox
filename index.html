@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Do Good Party Box — Reusable party kits on rotation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#2F8B6E;
+    --secondary:#4AA89F;
+    --accent:#C9A876;
+    --light:#E8DCC8;
+    --cream:#F5F1E8;
+    --dark:#2D3E31;
+    --white:#FFFFFF;
+    --line:rgba(45,62,49,0.1);
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--cream);
+    color:var(--dark);
+    font-family:'Work Sans', sans-serif;
+    font-size:16px;
+    line-height:1.65;
+  }
+  h1,h2,h3,h4{
+    font-family:'Fredoka', sans-serif;
+    font-weight:600;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  p{margin:0;}
+  a{color:inherit;}
+  .wrap{max-width:1200px; margin:0 auto; padding:0 32px;}
+
+  /* HEADER */
+  header{
+    background:var(--cream);
+    border-bottom:1px solid var(--line);
+    position:sticky;
+    top:0;
+    z-index:40;
+  }
+  .navbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:20px 32px;
+    max-width:1200px;
+    margin:0 auto;
+  }
+  .logo-area{
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .logo-mark{width:48px; height:48px;}
+  nav ul{list-style:none; display:flex; gap:40px; margin:0; padding:0;}
+  nav a{text-decoration:none; opacity:0.75; transition:opacity 0.2s;}
+  nav a:hover{opacity:1;}
+  .cta-header{
+    background:var(--primary);
+    color:var(--white);
+    padding:12px 28px;
+    border-radius:30px;
+    font-weight:600;
+    font-size:0.9rem;
+    text-decoration:none;
+    transition:background 0.2s;
+  }
+  .cta-header:hover{background:var(--secondary);}
+
+  /* HERO */
+  .hero{
+    padding:60px 0 80px;
+    text-align:center;
+  }
+  .hero-content{max-width:700px; margin:0 auto;}
+  h1{
+    font-size:clamp(2.2rem, 5vw, 3.8rem);
+    line-height:1.1;
+    margin-bottom:20px;
+  }
+  .hero-subtitle{
+    font-size:1.2rem;
+    opacity:0.85;
+    margin-bottom:40px;
+    max-width:600px;
+    margin-left:auto;
+    margin-right:auto;
+  }
+  .hero-actions{
+    display:flex;
+    gap:20px;
+    justify-content:center;
+    flex-wrap:wrap;
+  }
+  .btn-primary{
+    background:var(--primary);
+    color:var(--white);
+    padding:16px 40px;
+    border-radius:30px;
+    font-weight:600;
+    border:none;
+    cursor:pointer;
+    font-size:1rem;
+    transition:transform 0.2s, background 0.2s;
+    text-decoration:none;
+    display:inline-block;
+  }
+  .btn-primary:hover{background:var(--secondary); transform:translateY(-2px);}
+  .btn-secondary{
+    border:2px solid var(--dark);
+    background:transparent;
+    color:var(--dark);
+    padding:14px 40px;
+    border-radius:30px;
+    font-weight:600;
+    cursor:pointer;
+    font-size:1rem;
+    transition:background 0.2s;
+    text-decoration:none;
+    display:inline-block;
+  }
+  .btn-secondary:hover{background:var(--light);}
+
+  /* CYCLE VISUAL */
+  .cycle-section{
+    padding:60px 0;
+    background:var(--white);
+    position:relative;
+    overflow:hidden;
+  }
+  .cycle-title{
+    text-align:center;
+    margin-bottom:50px;
+  }
+  .cycle-title h2{font-size:2.2rem; margin-bottom:12px;}
+  .cycle-title p{opacity:0.8; font-size:1.05rem; max-width:500px; margin:0 auto;}
+  .cycle-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:30px;
+    position:relative;
+    padding:0 40px;
+  }
+  .cycle-item{
+    text-align:center;
+    position:relative;
+  }
+  .cycle-icon{
+    width:80px;
+    height:80px;
+    background:var(--light);
+    border-radius:50%;
+    margin:0 auto 24px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:2.5rem;
+  }
+  .cycle-item h3{font-size:1.1rem; margin-bottom:8px;}
+  .cycle-item p{font-size:0.95rem; opacity:0.8; line-height:1.5;}
+  .cycle-arrow{
+    position:absolute;
+    top:35px;
+    width:30px;
+    height:2px;
+    background:var(--primary);
+    opacity:0.3;
+  }
+  .cycle-arrow.a1{left:calc(25% - 15px);}
+  .cycle-arrow.a2{left:calc(50% - 15px);}
+  .cycle-arrow.a3{left:calc(75% - 15px);}
+  .cycle-arrow::after{
+    content:'→';
+    position:absolute;
+    right:-10px;
+    top:-8px;
+    color:var(--primary);
+    font-size:1.2rem;
+  }
+
+  /* KIT SECTION */
+  .kit-section{
+    padding:60px 0;
+  }
+  .kit-header{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:60px;
+    align-items:flex-start;
+    margin-bottom:0;
+  }
+  .kit-header h2{font-size:2.2rem; margin-bottom:24px;}
+  .kit-header p{opacity:0.85; font-size:1.05rem; line-height:1.7; margin-bottom:20px;}
+  .kit-list{
+    list-style:none;
+    padding:0;
+    margin:0;
+  }
+  .kit-list li{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    padding:10px 0;
+    font-size:1rem;
+    border-bottom:1px solid var(--line);
+  }
+  .kit-list li:last-child{border:none;}
+  .kit-dot{
+    width:10px;
+    height:10px;
+    background:var(--primary);
+    border-radius:50%;
+    flex-shrink:0;
+  }
+  .kit-visual{
+    background:var(--light);
+    border-radius:16px;
+    padding:32px;
+    text-align:center;
+    min-height:auto;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+  }
+  .kit-visual-icon{
+    font-size:2.5rem;
+    margin-bottom:12px;
+  }
+  .kit-visual p{
+    font-size:0.9rem;
+    opacity:0.8;
+  }
+
+  /* PRICING SECTION */
+  .pricing-section{
+    padding:60px 0;
+    background:var(--white);
+  }
+  .pricing-header{
+    text-align:center;
+    margin-bottom:40px;
+  }
+  .pricing-header h2{font-size:2.2rem; margin-bottom:12px;}
+  .pricing-cards{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:24px;
+  }
+  .price-card{
+    background:var(--cream);
+    border-radius:16px;
+    padding:40px;
+    text-align:center;
+    border:2px solid var(--line);
+    transition:border-color 0.2s, transform 0.2s;
+  }
+  .price-card:hover{
+    border-color:var(--primary);
+    transform:translateY(-4px);
+  }
+  .price-card h3{
+    font-size:1.3rem;
+    margin-bottom:16px;
+  }
+  .price-amount{
+    font-size:2.5rem;
+    font-weight:700;
+    color:var(--primary);
+    margin-bottom:12px;
+  }
+  .price-card p{
+    font-size:0.95rem;
+    opacity:0.8;
+    line-height:1.6;
+  }
+
+  /* OPTIONS SECTION */
+  .options-section{
+    padding:60px 0;
+  }
+  .options-header{
+    text-align:center;
+    margin-bottom:40px;
+  }
+  .options-header h2{font-size:2.2rem; margin-bottom:12px;}
+  .options-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:24px;
+  }
+  .option-card{
+    background:var(--white);
+    border:2px solid var(--line);
+    border-radius:16px;
+    padding:40px;
+    cursor:pointer;
+    transition:all 0.2s;
+  }
+  .option-card.active{
+    border-color:var(--primary);
+    background:#F8FAF9;
+  }
+  .option-card h3{
+    font-size:1.2rem;
+    margin-bottom:12px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .option-tag{
+    font-size:0.75rem;
+    background:var(--light);
+    color:var(--primary);
+    padding:4px 12px;
+    border-radius:20px;
+    font-weight:700;
+  }
+  .option-card p{font-size:0.95rem; opacity:0.8;}
+
+  /* BOOKING SECTION */
+  .booking-section{
+    padding:60px 0;
+  }
+  .booking-container{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:60px;
+  }
+  .booking-header h2{font-size:2.2rem; margin-bottom:20px;}
+  .booking-header p{opacity:0.85; font-size:1.05rem; line-height:1.7; margin-bottom:20px;}
+  .booking-benefits{
+    list-style:none;
+    padding:0;
+    margin:32px 0 0;
+  }
+  .booking-benefits li{
+    display:flex;
+    gap:12px;
+    padding:12px 0;
+    font-size:0.95rem;
+  }
+  .booking-benefits li:before{
+    content:'✓';
+    color:var(--primary);
+    font-weight:700;
+    font-size:1.2rem;
+  }
+
+  .form-wrapper{
+    background:var(--cream);
+    border-radius:16px;
+    padding:40px;
+  }
+  .form-row{
+    margin-bottom:20px;
+  }
+  .form-row label{
+    display:block;
+    font-weight:600;
+    margin-bottom:8px;
+    font-size:0.9rem;
+  }
+  .form-row input,
+  .form-row select{
+    width:100%;
+    padding:12px 14px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    font-family:'Work Sans';
+    font-size:0.95rem;
+    background:var(--white);
+  }
+  .form-row-double{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+  }
+  .form-row-double .form-row{margin-bottom:0;}
+  .form-wrapper button{
+    width:100%;
+    margin-top:24px;
+  }
+  .secure-note{
+    text-align:center;
+    font-size:0.8rem;
+    opacity:0.65;
+    margin-top:16px;
+  }
+
+  /* FOOTER */
+  footer{
+    background:var(--dark);
+    color:var(--cream);
+    padding:60px 0 40px;
+    border-top:2px solid var(--line);
+  }
+  .footer-content{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:60px;
+    margin-bottom:40px;
+  }
+  .footer-col h3{
+    font-size:1rem;
+    margin-bottom:16px;
+    color:var(--white);
+  }
+  .footer-col p{
+    font-size:0.9rem;
+    opacity:0.8;
+    margin-bottom:8px;
+    line-height:1.6;
+  }
+  .footer-bottom{
+    border-top:1px solid rgba(255,255,255,0.1);
+    padding-top:24px;
+    text-align:center;
+    font-size:0.85rem;
+    opacity:0.7;
+  }
+
+  @media (max-width: 900px){
+    nav ul{display:none;}
+    .cycle-grid{grid-template-columns:repeat(2,1fr); gap:30px;}
+    .cycle-arrow{display:none;}
+    .kit-header, .booking-container{grid-template-columns:1fr;}
+    .pricing-cards, .options-grid{grid-template-columns:1fr;}
+    .footer-content{grid-template-columns:1fr;}
+    .hero{padding:60px 0 80px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="navbar">
+    <div class="logo-area">
+      <img src="logo-favicon.png" alt="" class="logo-mark">
+    </div>
+    <nav>
+      <ul>
+        <li><a href="#cycle">The cycle</a></li>
+        <li><a href="#kit">What's inside</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#book">Book</a></li>
+      </ul>
+    </nav>
+    <a href="#book" class="cta-header">Book a kit</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap hero-content">
+    <h1>Party kits that come back</h1>
+    <p class="hero-subtitle">No single-use waste. Just a box of reusable plates, cups and cutlery on rotation. You hire it, use it, and we collect it back.</p>
+    <div class="hero-actions">
+      <a href="#book" class="btn-primary">Book now from £25</a>
+      <a href="#cycle" class="btn-secondary">How it works</a>
+    </div>
+  </div>
+</section>
+
+<section class="cycle-section" id="cycle">
+  <div class="wrap">
+    <div class="cycle-title">
+      <h2>The party kit cycle</h2>
+      <p>A complete kit goes out to your party, comes back, gets washed, and goes out again</p>
+    </div>
+    <div class="cycle-grid">
+      <div class="cycle-item">
+        <div class="cycle-icon">📦</div>
+        <h3>Order</h3>
+        <p>Pick your date and headcount</p>
+      </div>
+      <div class="cycle-arrow a1"></div>
+      <div class="cycle-item">
+        <div class="cycle-icon">🚚</div>
+        <h3>Receive</h3>
+        <p>Delivered to your door</p>
+      </div>
+      <div class="cycle-arrow a2"></div>
+      <div class="cycle-item">
+        <div class="cycle-icon">🎉</div>
+        <h3>Use</h3>
+        <p>Party with proper tableware</p>
+      </div>
+      <div class="cycle-arrow a3"></div>
+      <div class="cycle-item">
+        <div class="cycle-icon">♻️</div>
+        <h3>Return</h3>
+        <p>We collect and wash it</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="kit-section" id="kit">
+  <div class="wrap">
+    <div class="kit-header">
+      <div>
+        <h2>Complete party kits</h2>
+        <p>Every kit arrives ready to go. Everything you need for your table, sized to your headcount. No planning, no stress.</p>
+        <ul class="kit-list">
+          <li><span class="kit-dot"></span>Plates</li>
+          <li><span class="kit-dot"></span>Cups</li>
+          <li><span class="kit-dot"></span>Bowls</li>
+          <li><span class="kit-dot"></span>Cutlery sets</li>
+          <li><span class="kit-dot"></span>Serving jugs</li>
+          <li><span class="kit-dot"></span>Serving platters</li>
+        </ul>
+      </div>
+      <div class="kit-visual">
+        <div class="kit-visual-icon">📋</div>
+        <p>Everything you need, nothing you don't</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pricing-section" id="pricing">
+  <div class="wrap">
+    <div class="pricing-header">
+      <h2>Transparent pricing</h2>
+      <p>One simple price. No hidden fees.</p>
+    </div>
+    <div class="pricing-cards">
+      <div class="price-card">
+        <h3>Kit hire</h3>
+        <div class="price-amount">£25</div>
+        <p>One flat rate for a complete kit, whatever your headcount</p>
+      </div>
+      <div class="price-card">
+        <h3>Washing service</h3>
+        <div class="price-amount">£5</div>
+        <p>Optional. We rinse and pack everything back</p>
+      </div>
+      <div class="price-card">
+        <h3>Delivery</h3>
+        <div class="price-amount">Free–£10</div>
+        <p>Depends on your distance. Collection always free</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="options-section" id="options">
+  <div class="wrap">
+    <div class="options-header">
+      <h2>Choose your way</h2>
+    </div>
+    <div class="options-grid">
+      <div class="option-card active" onclick="selectOption(this, 'wash')">
+        <h3>Washing up <span class="option-tag">Free</span></h3>
+        <p>Rinse it yourself, pack it back in the box we delivered</p>
+      </div>
+      <div class="option-card" onclick="selectOption(this, 'wash')">
+        <h3>We wash it <span class="option-tag">£5</span></h3>
+        <p>Leave it as is. We'll handle the washing and packing</p>
+      </div>
+      <div class="option-card active" onclick="selectOption(this, 'delivery')">
+        <h3>Collect <span class="option-tag">Free</span></h3>
+        <p>Pick up from our location, drop off yourself</p>
+      </div>
+      <div class="option-card" onclick="selectOption(this, 'delivery')">
+        <h3>We deliver <span class="option-tag">£5–£10</span></h3>
+        <p>Depends on your distance from us. We'll confirm at booking</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="booking-section" id="book">
+  <div class="wrap">
+    <div class="booking-container">
+      <div class="booking-header">
+        <h2>Ready to book?</h2>
+        <p>It takes 60 seconds. Pick a date, tell us your headcount, and we'll send you a confirmation with all the details.</p>
+        <ul class="booking-benefits">
+          <li>Kit hire from £25</li>
+          <li>Delivery or collection</li>
+          <li>Optional washing service</li>
+          <li>Secure payment at checkout</li>
+        </ul>
+      </div>
+      <div class="form-wrapper">
+        <div class="form-row">
+          <label>Party date</label>
+          <input type="date" id="party-date">
+        </div>
+        <div class="form-row-double">
+          <div class="form-row">
+            <label>Number of guests</label>
+            <input type="number" id="guests" placeholder="e.g. 20">
+          </div>
+          <div class="form-row">
+            <label>Your postcode</label>
+            <input type="text" id="postcode" placeholder="e.g. BS1 4ST">
+          </div>
+        </div>
+        <div class="form-row">
+          <label>Contact email</label>
+          <input type="email" id="email" placeholder="you@example.com">
+        </div>
+        <button class="btn-primary" type="button">Confirm booking</button>
+        <p class="secure-note">Secure payment taken at checkout</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-content">
+      <div class="footer-col">
+        <h3>Do Good Party Box</h3>
+        <p>Reusable party kits on rotation. Better for your wallet, better for the planet.</p>
+      </div>
+      <div class="footer-col">
+        <h3>Get in touch</h3>
+        <p>hello@dogoodpartybox.co.uk</p>
+        <p>Serving [your location] and surrounding areas</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2024 Do Good Party Box. Keeping parties and the planet in mind.</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+  function selectOption(el, type){
+    const parent = el.parentElement;
+    parent.querySelectorAll('.option-card').forEach(card => {
+      if(card.parentElement === parent) card.classList.remove('active');
+    });
+    el.classList.add('active');
+  }
+</script>
+
+</body>
+</html>
