@@ -54,7 +54,6 @@
     max-width:1200px;
     margin:0 auto;
     padding:16px 32px;
-    transition:padding 0.3s ease;
     gap:16px;
   }
   header.scrolled .navbar{
@@ -676,6 +675,11 @@
       if(card.parentElement === parent) card.classList.remove('active');
     });
     el.classList.add('active');
+  }
+
+  // Clear hash on page load to prevent unwanted jumping
+  if (window.location.hash) {
+    history.replaceState(null, '', window.location.pathname + window.location.search);
   }
 
   // Header scroll animation with hysteresis
