@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Do Good Party Box — Reusable party kits on rotation</title>
 <link rel="icon" type="image/jpeg" href="Favicon - Colour.jpg">
+<link rel="icon" type="image/png" href="Favicon - Colour.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -66,27 +67,21 @@
     flex-shrink:0;
     min-width:0;
   }
-  .logo-full,
-  .logo-compact{
+  .logo-full{
     display:block;
     width:auto;
-  }
-  .logo-full{
-    max-height:120px;
-    opacity:1;
+    height:120px;
   }
   .logo-compact{
-    max-height:0;
-    opacity:0;
-    overflow:hidden;
+    display:none;
+    width:auto;
+    height:40px;
   }
   header.scrolled .logo-full{
-    max-height:0;
-    opacity:0;
+    display:none;
   }
   header.scrolled .logo-compact{
-    max-height:40px;
-    opacity:1;
+    display:block;
   }
   nav ul{list-style:none; display:flex; gap:40px; margin:0; padding:0;}
   nav a{text-decoration:none; opacity:0.75; transition:opacity 0.2s;}
@@ -683,12 +678,15 @@
     el.classList.add('active');
   }
 
-  // Header scroll animation
+  // Header scroll animation with hysteresis
   const header = document.querySelector('header');
+  let headerCompact = false;
   window.addEventListener('scroll', () => {
-    if (window.scrollY > 80) {
+    if (!headerCompact && window.scrollY > 80) {
+      headerCompact = true;
       header.classList.add('scrolled');
-    } else {
+    } else if (headerCompact && window.scrollY < 50) {
+      headerCompact = false;
       header.classList.remove('scrolled');
     }
   });
