@@ -51,7 +51,7 @@
     overflow-anchor:none;
   }
   header.scrolled{
-    padding:2px 32px;
+    padding:3px 32px;
   }
   @media (max-width: 900px){
     header{
@@ -81,11 +81,10 @@
   .logo-area img{
     max-height:140px;
     width:auto;
-    transform-origin:left center;
-    transition:transform 0.25s ease-out;
+    transition:max-height 0.25s ease-out;
   }
   header.scrolled .logo-area img{
-    transform:scale(0.5);
+    max-height:55px;
   }
   nav ul{list-style:none; display:flex; gap:40px; margin:0; padding:0;}
   nav a{text-decoration:none; opacity:0.75; transition:opacity 0.2s, font-size 0.25s ease-out;}
