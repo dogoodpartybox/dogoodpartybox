@@ -437,14 +437,43 @@
     .footer-content{grid-template-columns:1fr;}
     .hero{padding:60px 0 80px;}
   }
+
+  /* WATERMARK OVERLAY */
+  .watermark{
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    pointer-events:none;
+    z-index:1;
+  }
+  .watermark-text{
+    font-size:clamp(4rem, 12vw, 10rem);
+    font-weight:700;
+    color:rgba(45,62,49,0.08);
+    text-align:center;
+    letter-spacing:8px;
+    font-family:'Fredoka', sans-serif;
+    line-height:1;
+    transform:rotate(-25deg);
+    white-space:nowrap;
+  }
 </style>
 </head>
 <body>
 
+<div class="watermark">
+  <div class="watermark-text">Coming Soon</div>
+</div>
+
 <header>
   <div class="navbar">
     <div class="logo-area">
-      <img src="logo-favicon.png" alt="" class="logo-mark">
+      <img src="Logo_Main_-_Colour-removebg-preview.png" alt="Do Good Party Box" style="max-height: 50px; width: auto;">
     </div>
     <nav>
       <ul>
@@ -460,7 +489,6 @@
 
 <section class="hero">
   <div class="wrap hero-content">
-    <img src="Logo Main - Colour.jpg" alt="Do Good Party Box logo" style="max-width: 200px; height: auto; margin-bottom: 32px;">
     <h1>Party kits that come back</h1>
     <p class="hero-subtitle">No single-use waste. Just a box of reusable plates, cups and cutlery on rotation. You hire it, use it, and we collect it back.</p>
     <div class="hero-actions">
@@ -622,7 +650,7 @@
   <div class="wrap">
     <div class="footer-content">
       <div class="footer-col">
-        <img src="Favicon - Colour.jpg" alt="Do Good Party Box" style="width: 80px; height: auto; margin-bottom: 16px; border-radius: 50%;">
+        <img src="Logo_Main_-_Colour-removebg-preview.png" alt="Do Good Party Box" style="width: 80px; height: auto; margin-bottom: 16px; border-radius: 50%;">
         <h3>Do Good Party Box</h3>
         <p>Reusable party kits on rotation. Better for your wallet, better for the planet.</p>
       </div>
