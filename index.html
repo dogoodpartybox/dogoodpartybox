@@ -53,9 +53,6 @@
   header.scrolled{
     padding:3px 32px;
   }
-  header.scrolled{
-    padding:3px 32px;
-  }
   @media (max-width: 900px){
     header{
       padding:12px 32px;
@@ -84,19 +81,6 @@
   .logo-area img{
     max-height:140px;
     width:auto;
-  }
-  .logo-full{
-    display:block;
-  }
-  .logo-compact{
-    display:none;
-    max-height:55px;
-  }
-  header.scrolled .logo-full{
-    display:none;
-  }
-  header.scrolled .logo-compact{
-    display:block;
   }
   nav ul{list-style:none; display:flex; gap:40px; margin:0; padding:0;}
   nav a{text-decoration:none; opacity:0.75; transition:opacity 0.2s, font-size 0.25s ease-out;}
@@ -528,8 +512,7 @@
   <div class="navbar">
     <div class="logo-area">
       <a href="#" style="display:flex; align-items:center; text-decoration:none;">
-        <img src="Logo_Main_-_Colour-removebg-preview.png" alt="Do Good Party Box" class="logo-full" style="cursor:pointer;">
-        <img src="Logo Main - Small - Colour.jpg" alt="Do Good Party Box" class="logo-compact" style="cursor:pointer;">
+        <img src="Logo_Main_-_Colour-removebg-preview.png" alt="Do Good Party Box" style="max-height:140px; width:auto; cursor:pointer;">
       </a>
     </div>
     <nav>
