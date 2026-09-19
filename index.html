@@ -74,10 +74,11 @@
     max-height:140px;
     width:auto;
     transform-origin:left center;
-    transition:transform 0.2s ease-out;
+    transition:max-height 0.25s ease-out, transform 0.25s ease-out;
   }
   header.scrolled .logo-area img{
-    transform:scale(0.5);
+    max-height:60px;
+    transform:scale(1);
   }
   nav ul{list-style:none; display:flex; gap:40px; margin:0; padding:0;}
   nav a{text-decoration:none; opacity:0.75; transition:opacity 0.2s, font-size 0.25s ease-out;}
@@ -383,6 +384,7 @@
     background:var(--cream);
     border-radius:16px;
     padding:40px;
+    border:1px solid var(--line);
   }
   .form-row{
     margin-bottom:20px;
@@ -460,6 +462,15 @@
     .pricing-cards, .options-grid{grid-template-columns:1fr;}
     .footer-content{grid-template-columns:1fr;}
     .hero{padding:60px 0 80px;}
+    .form-wrapper{
+      padding:28px;
+      background:var(--white);
+      border:2px solid var(--line);
+    }
+    .form-row input{
+      padding:10px 12px;
+      font-size:16px;
+    }
   }
 
   /* WATERMARK OVERLAY */
@@ -658,7 +669,7 @@
           </div>
           <div class="form-row">
             <label>Your postcode</label>
-            <input type="text" id="postcode" placeholder="e.g. BS1 4ST">
+            <input type="text" id="postcode" placeholder="e.g. CO1 1AA">
           </div>
         </div>
         <div class="form-row">
@@ -683,7 +694,7 @@
       <div class="footer-col">
         <h3>Get in touch</h3>
         <p>hello@dogoodpartybox.co.uk</p>
-        <p>Serving [your location] and surrounding areas</p>
+        <p>Serving Colchester, Essex and surrounding areas</p>
       </div>
     </div>
     <div class="footer-bottom">
