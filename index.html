@@ -19,7 +19,7 @@
     --line:rgba(45,62,49,0.1);
   }
   *{box-sizing:border-box;}
-  html{scroll-behavior:smooth; scroll-padding-top:80px;}
+  html{scroll-behavior:smooth; scroll-padding-top:70px;}
   body{
     margin:0;
     background:var(--cream);
@@ -45,22 +45,20 @@
     position:sticky;
     top:0;
     z-index:40;
-    padding:12px 32px;
-    transition:padding 0.3s ease-out;
+    padding:8px 32px;
+    transition:padding 0.25s ease-out;
     will-change:padding;
     overflow-anchor:none;
   }
   header.scrolled{
-    padding:6px 32px;
+    padding:4px 32px;
   }
   .navbar{
     display:flex;
     align-items:center;
     justify-content:space-between;
-    padding:12px 32px;
     max-width:1200px;
     margin:0 auto;
-    transition:padding 0.3s ease;
   }
   .logo-area{
     display:flex;
@@ -72,23 +70,15 @@
     display:flex;
     align-items:center;
   }
-  .logo-full{
+  .logo-area img{
     max-height:140px;
     width:auto;
-    display:block;
+    transform-origin:left center;
+    transition:transform 0.2s ease-out;
   }
-  .logo-compact{
-    max-height:60px;
-    width:auto;
-    display:none;
+  header.scrolled .logo-area img{
+    transform:scale(0.5);
   }
-  header.scrolled .logo-full{
-    display:none;
-  }
-  header.scrolled .logo-compact{
-    display:block;
-  }
-  .logo-mark{width:48px; height:48px;}
   nav ul{list-style:none; display:flex; gap:40px; margin:0; padding:0;}
   nav a{text-decoration:none; opacity:0.75; transition:opacity 0.2s;}
   nav a:hover{opacity:1;}
@@ -503,8 +493,7 @@
   <div class="navbar">
     <div class="logo-area">
       <a href="#" style="display:flex; align-items:center; text-decoration:none;">
-        <img src="Logo_Main_-_Colour-removebg-preview.png" alt="Do Good Party Box" class="logo-full" style="cursor:pointer;">
-        <img src="Favicon - Colour.jpg" alt="Do Good Party Box" class="logo-compact" style="cursor:pointer; border-radius:50%;">
+        <img src="Logo_Main_-_Colour-removebg-preview.png" alt="Do Good Party Box" style="cursor:pointer;">
       </a>
     </div>
     <nav>
@@ -711,10 +700,10 @@
   const header = document.querySelector('header');
   let headerCompact = false;
   window.addEventListener('scroll', () => {
-    if (!headerCompact && window.scrollY > 50) {
+    if (!headerCompact && window.scrollY > 70) {
       headerCompact = true;
       header.classList.add('scrolled');
-    } else if (headerCompact && window.scrollY < 30) {
+    } else if (headerCompact && window.scrollY < 40) {
       headerCompact = false;
       header.classList.remove('scrolled');
     }
