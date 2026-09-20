@@ -689,13 +689,19 @@
   const header = document.querySelector('header');
   let headerCompact = false;
   window.addEventListener('scroll', () => {
-    if (!headerCompact && window.scrollY > 150) {
+    if (!headerCompact && window.scrollY > 100) {
       headerCompact = true;
       header.classList.add('scrolled');
     } else if (headerCompact && window.scrollY < 60) {
       headerCompact = false;
       header.classList.remove('scrolled');
     }
+  });
+
+  // Logo click to scroll to top
+  document.querySelector('.logo-area').addEventListener('click', (e) => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 </script>
 
