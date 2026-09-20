@@ -428,6 +428,25 @@
     opacity:0.65;
     margin-top:16px;
   }
+  .required{
+    color:var(--primary);
+    font-weight:600;
+  }
+  .form-message{
+    font-size:0.85rem;
+    margin-top:8px;
+    margin-bottom:0;
+    padding:10px;
+    border-radius:6px;
+  }
+  .form-message.error{
+    background:rgba(200,50,50,0.1);
+    color:#c83232;
+  }
+  .form-message.info{
+    background:rgba(47,139,110,0.1);
+    color:var(--primary);
+  }
 
   /* FOOTER */
   footer{
@@ -680,6 +699,20 @@
             <option value="collect">Collect yourself</option>
             <option value="we-deliver">We deliver</option>
           </select>
+          <p id="delivery-message" class="form-message"></p>
+        </div>
+        <div class="form-row" id="collection-date-row" style="display:none;">
+          <label>Collection date <span class="required">*</span></label>
+          <input type="date" id="collection-date">
+        </div>
+        <div class="form-row" id="collection-time-row" style="display:none;">
+          <label>Collection pick-up window <span class="required">*</span></label>
+          <select id="collection-time">
+            <option value="">Select a time</option>
+            <option value="morning">Morning (8am-12pm)</option>
+            <option value="afternoon">Afternoon (12pm-5pm)</option>
+            <option value="evening">Evening (5pm-8pm)</option>
+          </select>
         </div>
         <div class="form-row">
           <label>Kit colour preference</label>
@@ -744,6 +777,142 @@
   document.querySelector('.logo-area').addEventListener('click', (e) => {
     e.preventDefault();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // Postcode calculator
+  const BUSINESS_LAT = 51.8930;
+  const BUSINESS_LNG = 0.8393;
+  const BUSINESS_POSTCODE = 'CO1 2TP';
+
+  function haversineDistance(lat1, lon1, lat2, lon2) {
+    const R = 3959; // Earth's radius in miles
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  function updateDeliveryCost(distance) {
+    const deliverySelect = document.getElementById('delivery');
+    const message = document.getElementById('delivery-message');
+
+    // Clear previous custom options
+    const existingOptions = deliverySelect.querySelectorAll('option[data-calculated]');
+    existingOptions.forEach(opt => opt.remove());
+
+    if (distance > 10) {
+      message.textContent = 'Outside our standard delivery area. Please contact us to discuss options.';
+      message.className = 'form-message error';
+      
+      // Add contact option
+      const contactOption = document.createElement('option');
+      contactOption.value = 'contact';
+      contactOption.textContent = 'Contact us (outside standard area)';
+      contactOption.setAttribute('data-calculated', 'true');
+      deliverySelect.appendChild(contactOption);
+    } else {
+      message.textContent = '';
+      message.className = 'form-message';
+
+      let cost = 'Free';
+      let costValue = 0;
+
+      if (distance > 5) {
+        cost = '£10';
+        costValue = 10;
+      } else if (distance > 2) {
+        cost = '£5';
+        costValue = 5;
+      }
+
+      const deliveryOption = document.createElement('option');
+      deliveryOption.value = `we-deliver-${costValue}`;
+      deliveryOption.textContent = `We deliver (${cost})`;
+      deliveryOption.setAttribute('data-calculated', 'true');
+      deliverySelect.appendChild(deliveryOption);
+
+      message.textContent = `Delivery cost: ${cost} (${distance.toFixed(1)} miles away)`;
+      message.className = 'form-message info';
+    }
+  }
+
+  document.getElementById('postcode').addEventListener('input', async (e) => {
+    const postcode = e.target.value.trim().toUpperCase();
+    
+    if (!postcode || postcode.length < 6) {
+      document.getElementById('delivery-message').textContent = '';
+      return;
+    }
+
+    try {
+      const response = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(postcode)}`);
+      const data = await response.json();
+
+      if (data.status === 200) {
+        const userLat = data.result.latitude;
+        const userLng = data.result.longitude;
+        const distance = haversineDistance(BUSINESS_LAT, BUSINESS_LNG, userLat, userLng);
+        updateDeliveryCost(distance);
+      } else {
+        document.getElementById('delivery-message').textContent = 'Postcode not found. Please check and try again.';
+        document.getElementById('delivery-message').className = 'form-message error';
+      }
+    } catch (error) {
+      console.error('Postcode lookup error:', error);
+      document.getElementById('delivery-message').textContent = 'Error checking postcode. Please try again.';
+      document.getElementById('delivery-message').className = 'form-message error';
+    }
+  });
+
+  // Show/hide collection fields based on delivery method
+  document.getElementById('delivery').addEventListener('change', (e) => {
+    const collectionDateRow = document.getElementById('collection-date-row');
+    const collectionTimeRow = document.getElementById('collection-time-row');
+    const collectionDate = document.getElementById('collection-date');
+    const collectionTime = document.getElementById('collection-time');
+
+    if (e.target.value === 'collect') {
+      collectionDateRow.style.display = 'block';
+      collectionTimeRow.style.display = 'block';
+      collectionDate.required = true;
+      collectionTime.required = true;
+    } else {
+      collectionDateRow.style.display = 'none';
+      collectionTimeRow.style.display = 'none';
+      collectionDate.required = false;
+      collectionTime.required = false;
+      collectionDate.value = '';
+      collectionTime.value = '';
+    }
+  });
+
+  // Form submission validation
+  document.querySelector('.form-wrapper button').addEventListener('click', () => {
+    const delivery = document.getElementById('delivery').value;
+    const collectionDate = document.getElementById('collection-date');
+    const collectionTime = document.getElementById('collection-time');
+
+    if (delivery === 'contact') {
+      alert('Please contact us at hello@dogoodpartybox.co.uk to arrange delivery for your location.');
+      return;
+    }
+
+    if (delivery === 'collect') {
+      if (!collectionDate.value) {
+        alert('Please select a collection date.');
+        return;
+      }
+      if (!collectionTime.value) {
+        alert('Please select a collection time window.');
+        return;
+      }
+    }
+
+    // If validation passes, proceed to payment (to be implemented)
+    alert('Booking confirmed! Proceeding to payment...');
   });
 </script>
 
