@@ -799,40 +799,32 @@
     const deliverySelect = document.getElementById('delivery');
     const message = document.getElementById('delivery-message');
 
-    // Clear previous custom options
-    const existingOptions = deliverySelect.querySelectorAll('option[data-calculated]');
-    existingOptions.forEach(opt => opt.remove());
-
     if (distance > 10) {
-      message.textContent = 'Outside our standard delivery area. Please contact us to discuss options.';
+      message.innerHTML = 'Outside our standard delivery area. <a href="mailto:hello@dogoodpartybox.co.uk">Please contact us</a> to discuss options.';
       message.className = 'form-message error';
       
-      // Add contact option
-      const contactOption = document.createElement('option');
-      contactOption.value = 'contact';
-      contactOption.textContent = 'Contact us (outside standard area)';
-      contactOption.setAttribute('data-calculated', 'true');
-      deliverySelect.appendChild(contactOption);
+      // Disable "We deliver" option
+      const deliverOption = deliverySelect.querySelector('option[value="we-deliver"]');
+      if (deliverOption) {
+        deliverOption.disabled = true;
+      }
     } else {
       message.textContent = '';
       message.className = 'form-message';
 
       let cost = 'Free';
-      let costValue = 0;
 
       if (distance > 5) {
         cost = '£10';
-        costValue = 10;
       } else if (distance > 2) {
         cost = '£5';
-        costValue = 5;
       }
 
-      const deliveryOption = document.createElement('option');
-      deliveryOption.value = `we-deliver-${costValue}`;
-      deliveryOption.textContent = `We deliver (${cost})`;
-      deliveryOption.setAttribute('data-calculated', 'true');
-      deliverySelect.appendChild(deliveryOption);
+      // Enable "We deliver" option
+      const deliverOption = deliverySelect.querySelector('option[value="we-deliver"]');
+      if (deliverOption) {
+        deliverOption.disabled = false;
+      }
 
       message.textContent = `Delivery cost: ${cost} (${distance.toFixed(1)} miles away)`;
       message.className = 'form-message info';
@@ -894,11 +886,6 @@
     const delivery = document.getElementById('delivery').value;
     const collectionDate = document.getElementById('collection-date');
     const collectionTime = document.getElementById('collection-time');
-
-    if (delivery === 'contact') {
-      alert('Please contact us at hello@dogoodpartybox.co.uk to arrange delivery for your location.');
-      return;
-    }
 
     if (delivery === 'collect') {
       if (!collectionDate.value) {
