@@ -20,7 +20,7 @@
     --line:rgba(45,62,49,0.1);
   }
   *{box-sizing:border-box;}
-  html{scroll-behavior:smooth;}
+  html{scroll-behavior:smooth; scroll-padding-top:140px;}
   body{
     margin:0;
     background:var(--cream);
@@ -413,6 +413,12 @@
     gap:16px;
   }
   .form-row-double .form-row{margin-bottom:0;}
+  @media (max-width: 600px){
+    .form-row-double{
+      grid-template-columns:1fr;
+      gap:20px;
+    }
+  }
   .form-wrapper button{
     width:100%;
     margin-top:24px;
@@ -436,23 +442,38 @@
     grid-template-columns:1fr 1fr;
     gap:60px;
     margin-bottom:40px;
+    align-items:start;
   }
-  .footer-col h3{
-    font-size:1rem;
-    margin-bottom:16px;
-    color:var(--white);
+  .footer-col{
+    display:flex;
+    align-items:flex-start;
+    gap:24px;
   }
-  .footer-col p{
-    font-size:0.9rem;
-    opacity:0.8;
-    margin-bottom:8px;
-    line-height:1.6;
+  .footer-col.col-left{
+    flex-direction:column;
+  }
+  .footer-col.col-right{
+    flex-direction:column;
+    align-items:flex-start;
   }
   .footer-logo{
     width:80px;
     height:80px;
     border-radius:50%;
+    flex-shrink:0;
+  }
+  .footer-col h3{
+    font-size:1rem;
     margin-bottom:16px;
+    color:var(--white);
+    margin-top:0;
+  }
+  .footer-col p{
+    font-size:0.9rem;
+    opacity:0.8;
+    margin-bottom:8px;
+    margin-top:0;
+    line-height:1.6;
   }
   .footer-bottom{
     border-top:1px solid rgba(255,255,255,0.1);
@@ -593,19 +614,19 @@
       <h2>Choose your way</h2>
     </div>
     <div class="options-grid">
-      <div class="option-card active" onclick="selectOption(this, 'wash')">
+      <div class="option-card">
         <h3>Washing up <span class="option-tag">Free</span></h3>
         <p>Rinse it yourself, pack it back in the box we delivered</p>
       </div>
-      <div class="option-card" onclick="selectOption(this, 'wash')">
+      <div class="option-card">
         <h3>We wash it <span class="option-tag">£5</span></h3>
         <p>Leave it as is. We'll handle the washing and packing</p>
       </div>
-      <div class="option-card active" onclick="selectOption(this, 'delivery')">
+      <div class="option-card">
         <h3>Collect <span class="option-tag">Free</span></h3>
         <p>Pick up from our location, drop off yourself</p>
       </div>
-      <div class="option-card" onclick="selectOption(this, 'delivery')">
+      <div class="option-card">
         <h3>We deliver <span class="option-tag">£5–£10</span></h3>
         <p>Depends on your distance from us. We'll confirm at booking</p>
       </div>
@@ -645,6 +666,31 @@
           <label>Contact email</label>
           <input type="email" id="email" placeholder="you@example.com">
         </div>
+        <div class="form-row">
+          <label>Washing service</label>
+          <select id="washing">
+            <option value="">Select an option</option>
+            <option value="rinse-yourself">Rinse it yourself (Free)</option>
+            <option value="we-wash">We wash it (£5)</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Delivery or collection</label>
+          <select id="delivery">
+            <option value="">Select an option</option>
+            <option value="collect">Collect yourself (Free)</option>
+            <option value="we-deliver">We deliver (£5–£10)</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Kit colour preference</label>
+          <select id="colour">
+            <option value="">Select an option</option>
+            <option value="pastel">Pastel</option>
+            <option value="bright">Bright</option>
+            <option value="no-preference">No preference</option>
+          </select>
+        </div>
         <button class="btn-primary" type="button">Confirm booking</button>
         <p class="secure-note">Secure payment taken at checkout</p>
       </div>
@@ -655,15 +701,19 @@
 <footer>
   <div class="wrap">
     <div class="footer-content">
-      <div class="footer-col">
+      <div class="footer-col col-left">
         <img src="Favicon - Colour.png" alt="" class="footer-logo">
-        <h3>Do Good Party Box</h3>
-        <p>Reusable party kits on rotation. Better for your wallet, better for the planet.</p>
+        <div>
+          <h3>Do Good Party Box</h3>
+          <p>Reusable party kits on rotation. Better for your wallet, better for the planet.</p>
+        </div>
       </div>
-      <div class="footer-col">
-        <h3>Get in touch</h3>
-        <p><a href="mailto:hello@dogoodpartybox.co.uk">hello@dogoodpartybox.co.uk</a></p>
-        <p>Serving Colchester, Essex and surrounding areas</p>
+      <div class="footer-col col-right">
+        <div>
+          <h3>Get in touch</h3>
+          <p><a href="mailto:hello@dogoodpartybox.co.uk">hello@dogoodpartybox.co.uk</a></p>
+          <p>Serving Colchester, Essex and surrounding areas</p>
+        </div>
       </div>
     </div>
     <div class="footer-bottom">
@@ -673,15 +723,6 @@
 </footer>
 
 <script>
-  function selectOption(el, type){
-    const parent = el.parentElement;
-    const cards = parent.querySelectorAll('.option-card');
-    cards.forEach(card => {
-      if(card.parentElement === parent) card.classList.remove('active');
-    });
-    el.classList.add('active');
-  }
-
   // Clear hash on page load to prevent unwanted jumping
   if (window.location.hash) {
     history.replaceState(null, '', window.location.pathname + window.location.search);
