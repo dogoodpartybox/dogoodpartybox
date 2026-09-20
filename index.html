@@ -689,7 +689,7 @@
   const header = document.querySelector('header');
   let headerCompact = false;
   window.addEventListener('scroll', () => {
-    if (!headerCompact && window.scrollY > 80) {
+    if (!headerCompact && window.scrollY > 150) {
       headerCompact = true;
       header.classList.add('scrolled');
     } else if (headerCompact && window.scrollY < 50) {
