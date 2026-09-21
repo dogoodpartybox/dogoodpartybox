@@ -800,7 +800,7 @@
     const message = document.getElementById('delivery-message');
 
     if (distance > 10) {
-      message.innerHTML = 'Outside our standard delivery area. <a href="mailto:hello@dogoodpartybox.co.uk">Contact us</a> to discuss delivery, or select collection above.';
+      message.innerHTML = 'Outside our standard delivery area. <a href="mailto:hello@dogoodpartybox.co.uk">Contact us</a> to discuss delivery, or select collection below.';
       message.className = 'form-message error';
       
       // Disable "We deliver" option
@@ -900,6 +900,79 @@
 
     // If validation passes, proceed to payment (to be implemented)
     alert('Booking confirmed! Proceeding to payment...');
+  });
+
+  // Inventory availability checker
+  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzihI6oHCUhTL4pgcxqU7qwDiuzh3Rz3E__ftQisfjN8ZxXXkkXkbyB4sQ64YEQ3-kx1Q/exec";
+
+  document.getElementById('party-date').addEventListener('change', async (e) => {
+    const partyDate = e.target.value;
+    const partyDateInput = document.getElementById('party-date');
+    const bookButton = document.querySelector('.form-wrapper button');
+    
+    if (!partyDate) return;
+    
+    // Check if date is today or in the past
+    const selectedDate = new Date(partyDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
+    
+    if (selectedDate <= today) {
+      partyDateInput.style.borderColor = '#c83232';
+      bookButton.disabled = true;
+      bookButton.style.opacity = '0.5';
+      bookButton.style.cursor = 'not-allowed';
+      
+      let message = document.getElementById('party-date-message');
+      if (!message) {
+        message = document.createElement('p');
+        message.id = 'party-date-message';
+        message.className = 'form-message error';
+        partyDateInput.parentNode.appendChild(message);
+      }
+      message.textContent = 'Please select a future date.';
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${APPS_SCRIPT_URL}?partyDate=${partyDate}`);
+      const data = await response.json();
+      
+      if (data.error) {
+        console.error('Availability check error:', data.error);
+        return;
+      }
+      
+      if (!data.available) {
+        // Date is unavailable
+        partyDateInput.style.borderColor = '#c83232';
+        bookButton.disabled = true;
+        bookButton.style.opacity = '0.5';
+        bookButton.style.cursor = 'not-allowed';
+        
+        // Show message
+        let message = document.getElementById('party-date-message');
+        if (!message) {
+          message = document.createElement('p');
+          message.id = 'party-date-message';
+          message.className = 'form-message error';
+          partyDateInput.parentNode.appendChild(message);
+        }
+        message.textContent = 'This date is fully booked. Please choose another date.';
+      } else {
+        // Date is available
+        partyDateInput.style.borderColor = '';
+        bookButton.disabled = false;
+        bookButton.style.opacity = '1';
+        bookButton.style.cursor = 'pointer';
+        
+        const message = document.getElementById('party-date-message');
+        if (message) message.remove();
+      }
+    } catch (error) {
+      console.error('Availability check failed:', error);
+    }
   });
 </script>
 
