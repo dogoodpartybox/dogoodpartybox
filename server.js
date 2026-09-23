@@ -23,31 +23,37 @@ async function getSheetData() {
   try {
     const doc = new GoogleSpreadsheet(process.env.SHEET_ID);
     
-    // Use the updated authentication for google-spreadsheet v4
+    // Validate environment variables
+    if (!process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
+      throw new Error('Missing Google credentials in environment variables');
+    }
+    
     await doc.useServiceAccountAuth({
       client_email: process.env.GOOGLE_CLIENT_EMAIL,
       private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-      type: 'service_account',
+      type: 'service_account'
     });
     
     await doc.loadInfo();
     const sheet = doc.sheetsByTitle['Bookings'];
+    if (!sheet) {
+      throw new Error('Bookings sheet not found');
+    }
     const rows = await sheet.getRows();
     return rows;
   } catch (error) {
-    console.error('Error fetching sheet:', error);
+    console.error('Error fetching sheet:', error.message);
     throw error;
   }
 }
-    
-    await doc.loadInfo();
-    const sheet = doc.sheetsByTitle['Bookings'];
-    const rows = await sheet.getRows();
-    return rows;
-  } catch (error) {
-    console.error('Error fetching sheet:', error);
-    throw error;
-  }
+
+// Parse dates from Google Sheets (DD/MM/YYYY format)
+function parseGoogleSheetDate(dateStr) {
+  if (!dateStr) return null;
+  const [day, month, year] = dateStr.split('/');
+  const date = new Date(`${year}-${month}-${day}`);
+  date.setHours(0, 0, 0, 0);
+  return date;
 }
 
 // Check if date is available
@@ -78,18 +84,10 @@ async function isDateAvailable(partyDateStr) {
       
       if (!collectionDateStr || !returnDateStr) continue;
       
-      // Parse DD/MM/YYYY format from Google Sheets
-      const parseGoogleSheetDate = (dateStr) => {
-        if (!dateStr) return null;
-        const [day, month, year] = dateStr.split('/');
-        return new Date(`${year}-${month}-${day}`);
-      };
-
       const collectionDate = parseGoogleSheetDate(collectionDateStr);
       const returnDate = parseGoogleSheetDate(returnDateStr);
       
-      collectionDate.setHours(0, 0, 0, 0);
-      returnDate.setHours(0, 0, 0, 0);
+      if (!collectionDate || !returnDate) continue;
       
       // Check if party date falls within blocked range
       if (partyDate >= collectionDate && partyDate <= returnDate) {
