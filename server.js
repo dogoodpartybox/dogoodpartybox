@@ -66,8 +66,15 @@ async function isDateAvailable(partyDateStr) {
       
       if (!collectionDateStr || !returnDateStr) continue;
       
-      const collectionDate = new Date(collectionDateStr);
-      const returnDate = new Date(returnDateStr);
+      // Parse DD/MM/YYYY format from Google Sheets
+      const parseGoogleSheetDate = (dateStr) => {
+        if (!dateStr) return null;
+        const [day, month, year] = dateStr.split('/');
+        return new Date(`${year}-${month}-${day}`);
+      };
+
+      const collectionDate = parseGoogleSheetDate(collectionDateStr);
+      const returnDate = parseGoogleSheetDate(returnDateStr);
       
       collectionDate.setHours(0, 0, 0, 0);
       returnDate.setHours(0, 0, 0, 0);
