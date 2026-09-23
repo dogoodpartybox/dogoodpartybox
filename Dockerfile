@@ -1,3 +1,12 @@
-FROM pierrezemb/gostatic
-COPY . /srv/http/
-CMD ["-port","8080","-https-promote", "-enable-logging"]
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci --only=production
+
+COPY . .
+
+EXPOSE 8080
+
+CMD ["node", "server.js"]
