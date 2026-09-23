@@ -29,7 +29,7 @@ async function getSheetData() {
     });
     
     await doc.loadInfo();
-    const sheet = doc.sheetsByTitle['Bookings'];
+    const sheet = doc.sheetsByTitle['Do Good Party Box - Kit Inventory'];
     const rows = await sheet.getRows();
     return rows;
   } catch (error) {
