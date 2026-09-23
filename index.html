@@ -903,7 +903,7 @@
   });
 
   // Inventory availability checker
-  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbybQeicXeh8vcR96PzrKUwC-sA5sS1iexgCSVj2Y9istvpJVvnghBUE4akFuj8FhpsrJQ/exec";
+  const BACKEND_URL = "https://do-good-party-box-api.fly.dev";
 
   document.getElementById('party-date').addEventListener('change', async (e) => {
     const partyDate = e.target.value;
@@ -936,7 +936,7 @@
     }
     
     try {
-      const response = await fetch(`${APPS_SCRIPT_URL}?partyDate=${partyDate}`);
+      const response = await fetch(`${BACKEND_URL}/api/availability?partyDate=${partyDate}`);
       const data = await response.json();
       
       if (data.error) {
