@@ -951,15 +951,24 @@
         bookButton.style.opacity = '0.5';
         bookButton.style.cursor = 'not-allowed';
         
-        // Show message
+        // Track unavailable search
+        try {
+          fetch(`${BACKEND_URL}/api/log-search`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ partyDate: partyDate, available: false })
+          }).catch(() => {}); // Silent fail if tracking doesn't work
+        } catch (e) {}
+        
+        // Show message with contact link
         let message = document.getElementById('party-date-message');
         if (!message) {
-          message = document.createElement('p');
+          message = document.createElement('div');
           message.id = 'party-date-message';
           message.className = 'form-message error';
           partyDateInput.parentNode.appendChild(message);
         }
-        message.textContent = 'This date is fully booked. Please choose another date.';
+        message.innerHTML = 'This date is currently full, but please <a href="mailto:hello@dogoodpartybox.co.uk?subject=Party%20Box%20Booking%20Enquiry%20-%20' + partyDate + '">contact us</a> about your requirements.';
       } else {
         // Date is available
         partyDateInput.style.borderColor = '';
