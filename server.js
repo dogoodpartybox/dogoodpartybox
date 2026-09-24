@@ -168,27 +168,15 @@ app.get('/api/debug', async (req, res) => {
       return res.json({ success: true, message: 'No rows in sheet' });
     }
     
-    const firstRow = rows[0];
-    
-    // Log the raw row object to see its structure
-    const rowKeys = Object.keys(firstRow);
-    
     const data = rows.map((row, idx) => {
-      const fields = {};
-      rowKeys.forEach(key => {
-        if (!key.startsWith('_')) {
-          fields[key] = row[key];
-        }
-      });
       return {
         rowIndex: idx,
-        fields: fields
+        rawData: row._rawData
       };
     });
     
     res.json({ 
       success: true, 
-      rowKeys: rowKeys,
       rows: data 
     });
   } catch (error) {
