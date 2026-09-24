@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
+const nodemailer = require('nodemailer');
+const cron = require('node-cron');
 require('dotenv').config();
 
 const app = express();
@@ -59,6 +61,138 @@ function parseGoogleSheetDate(dateStr) {
   date.setHours(0, 0, 0, 0);
   return date;
 }
+
+// Email configuration
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_EMAIL,
+    pass: process.env.GMAIL_APP_PASSWORD
+  }
+});
+
+// Get today's enquiries from the sheet
+async function getTodaysEnquiries() {
+  try {
+    const rows = await getSheetData();
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    
+    const todaysEnquiries = [];
+    
+    for (const row of rows) {
+      const rawData = row._rawData;
+      const timestamp = rawData[0]; // Timestamp column
+      
+      if (timestamp && timestamp.startsWith(today)) {
+        todaysEnquiries.push({
+          timestamp: rawData[0],
+          partyDate: rawData[1],
+          guests: rawData[2],
+          postcode: rawData[3],
+          email: rawData[4],
+          notes: rawData[5]
+        });
+      }
+    }
+    
+    return todaysEnquiries;
+  } catch (error) {
+    console.error('Error getting today\'s enquiries:', error);
+    return [];
+  }
+}
+
+// Send daily digest email
+async function sendDailyDigest() {
+  try {
+    const enquiries = await getTodaysEnquiries();
+    
+    // Only send if there are enquiries
+    if (enquiries.length === 0) {
+      console.log('No enquiries today, skipping email');
+      return;
+    }
+    
+    const enquiryRows = enquiries.map((e, idx) => `
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #eee;">${idx + 1}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee;">${e.partyDate}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee;">${e.guests}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee;">${e.postcode}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee;"><a href="mailto:${e.email}">${e.email}</a></td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee;">${e.notes || '–'}</td>
+      </tr>
+    `).join('');
+    
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            h1 { color: #2F8B6E; border-bottom: 3px solid #2F8B6E; padding-bottom: 10px; }
+            .summary { background: #f5f1e8; padding: 15px; border-radius: 8px; margin: 20px 0; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th { background: #2F8B6E; color: white; padding: 12px; text-align: left; font-weight: 600; }
+            .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 0.9rem; color: #666; }
+            .link-btn { display: inline-block; background: #2F8B6E; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-top: 15px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>📅 Do Good Party Box – Daily Enquiries</h1>
+            
+            <div class="summary">
+              <strong>${enquiries.length} unavailable date enquir${enquiries.length === 1 ? 'y' : 'ies'}</strong> came in today.
+            </div>
+            
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Party Date</th>
+                  <th>Guests</th>
+                  <th>Postcode</th>
+                  <th>Email</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${enquiryRows}
+              </tbody>
+            </table>
+            
+            <a href="https://docs.google.com/spreadsheets/d/${process.env.SHEET_ID}/edit#gid=0" class="link-btn">View Full Sheet</a>
+            
+            <div class="footer">
+              <p>This is an automated daily digest from Do Good Party Box. No reply needed.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+    
+    await transporter.sendMail({
+      from: process.env.GMAIL_EMAIL,
+      to: process.env.DIGEST_EMAIL,
+      subject: `Do Good Party Box – ${enquiries.length} Enquir${enquiries.length === 1 ? 'y' : 'ies'} Today`,
+      html: htmlContent
+    });
+    
+    console.log(`Daily digest sent to ${process.env.DIGEST_EMAIL} with ${enquiries.length} enquiries`);
+  } catch (error) {
+    console.error('Error sending daily digest:', error);
+  }
+}
+
+// Schedule daily digest for 8:30 AM every day
+// Format: minute hour day month day-of-week
+cron.schedule('30 8 * * *', () => {
+  console.log('Running daily digest at 8:30 AM');
+  sendDailyDigest();
+});
 
 // Check if date is available
 async function isDateAvailable(partyDateStr) {
@@ -165,6 +299,115 @@ app.get('/api/availability', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Handle unavailable date enquiry submissions
+app.post('/api/unavailable-enquiry', async (req, res) => {
+  const { partyDate, guests, postcode, email, notes } = req.body;
+  
+  if (!partyDate || !guests || !postcode || !email) {
+    return res.status(400).json({ success: false, error: 'Missing required fields' });
+  }
+  
+  try {
+    const serviceAccountAuth = new JWT({
+      email: process.env.GOOGLE_CLIENT_EMAIL,
+      key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      scopes: [
+        'https://www.googleapis.com/auth/spreadsheets',
+        'https://www.googleapis.com/auth/drive'
+      ]
+    });
+
+    const doc = new GoogleSpreadsheet(process.env.SHEET_ID, serviceAccountAuth);
+    await doc.loadInfo();
+    
+    // Try to get or create the Unavailable Enquiries sheet
+    let sheet = doc.sheetsByTitle['Unavailable Enquiries'];
+    
+    if (!sheet) {
+      // Create the sheet if it doesn't exist
+      sheet = await doc.addSheet({
+        title: 'Unavailable Enquiries',
+        headerValues: ['Timestamp', 'Party Date', 'Guests', 'Postcode', 'Email', 'Notes']
+      });
+    }
+    
+    // Add a row
+    await sheet.addRows([
+      {
+        'Timestamp': new Date().toISOString(),
+        'Party Date': partyDate,
+        'Guests': guests,
+        'Postcode': postcode,
+        'Email': email,
+        'Notes': notes || ''
+      }
+    ]);
+    
+    // Send Slack notification if webhook is configured
+    if (process.env.SLACK_WEBHOOK_URL) {
+      const slackMessage = {
+        text: '📅 Unavailable Date Enquiry',
+        blocks: [
+          {
+            type: 'header',
+            text: {
+              type: 'plain_text',
+              text: '📅 Unavailable Date Enquiry'
+            }
+          },
+          {
+            type: 'section',
+            fields: [
+              {
+                type: 'mrkdwn',
+                text: `*Party Date:*\n${partyDate}`
+              },
+              {
+                type: 'mrkdwn',
+                text: `*Guests:*\n${guests}`
+              },
+              {
+                type: 'mrkdwn',
+                text: `*Postcode:*\n${postcode}`
+              },
+              {
+                type: 'mrkdwn',
+                text: `*Email:*\n${email}`
+              }
+            ]
+          }
+        ]
+      };
+      
+      if (notes) {
+        slackMessage.blocks.push({
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `*Notes:*\n${notes}`
+          }
+        });
+      }
+      
+      try {
+        await fetch(process.env.SLACK_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(slackMessage)
+        });
+      } catch (slackError) {
+        console.error('Error sending Slack notification:', slackError);
+        // Don't fail the enquiry submission if Slack fails
+      }
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error processing enquiry:', error);
+    res.json({ success: false, error: error.message });
   }
 });
 
