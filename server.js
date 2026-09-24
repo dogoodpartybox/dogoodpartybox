@@ -168,6 +168,55 @@ app.get('/api/availability', async (req, res) => {
   }
 });
 
+// Log search for unavailable dates
+app.post('/api/log-search', async (req, res) => {
+  const { partyDate, available } = req.body;
+  
+  // Only log unavailable searches
+  if (available) {
+    return res.json({ success: true });
+  }
+  
+  try {
+    const serviceAccountAuth = new JWT({
+      email: process.env.GOOGLE_CLIENT_EMAIL,
+      key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      scopes: [
+        'https://www.googleapis.com/auth/spreadsheets',
+        'https://www.googleapis.com/auth/drive'
+      ]
+    });
+
+    const doc = new GoogleSpreadsheet(process.env.SHEET_ID, serviceAccountAuth);
+    await doc.loadInfo();
+    
+    // Try to get or create the SearchLogs sheet
+    let sheet = doc.sheetsByTitle['Search Logs'];
+    
+    if (!sheet) {
+      // Create the sheet if it doesn't exist
+      sheet = await doc.addSheet({
+        title: 'Search Logs',
+        headerValues: ['Date Searched', 'Party Date', 'Timestamp']
+      });
+    }
+    
+    // Add a row
+    await sheet.addRows([
+      {
+        'Date Searched': new Date().toLocaleDateString('en-GB'),
+        'Party Date': partyDate,
+        'Timestamp': new Date().toISOString()
+      }
+    ]);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error logging search:', error);
+    res.json({ success: false, error: error.message });
+  }
+});
+
 // Diagnostic endpoint
 app.get('/api/debug', async (req, res) => {
   try {
