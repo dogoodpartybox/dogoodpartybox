@@ -1160,14 +1160,9 @@
     }
   });
 
-  // Privacy policy modal
+  // Privacy policy modal with event delegation (catches dynamically created links too)
   const privacyModal = document.getElementById('privacy-modal');
   const closePrivacyButton = document.getElementById('close-privacy-modal');
-
-  function openPrivacyModal(e) {
-    e.preventDefault();
-    privacyModal.style.display = 'flex';
-  }
 
   function closePrivacyModal() {
     privacyModal.style.display = 'none';
@@ -1184,17 +1179,13 @@
     }
   });
 
-  // Attach privacy modal handler to static link
-  const staticPrivacyLink = document.getElementById('open-privacy-link');
-  if (staticPrivacyLink) {
-    staticPrivacyLink.addEventListener('click', openPrivacyModal);
-  }
-
-  // Attach privacy modal handler to footer link
-  const footerPrivacyLink = document.getElementById('footer-privacy-link');
-  if (footerPrivacyLink) {
-    footerPrivacyLink.addEventListener('click', openPrivacyModal);
-  }
+  // Event delegation for privacy links (catches both static and dynamically created)
+  document.addEventListener('click', (e) => {
+    if (e.target.id === 'open-privacy-link' || e.target.id === 'footer-privacy-link') {
+      e.preventDefault();
+      privacyModal.style.display = 'flex';
+    }
+  });
 
 </script>
 
