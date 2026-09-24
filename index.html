@@ -813,6 +813,7 @@
       </div>
     </div>
     <div class="footer-bottom">
+      <p><a href="#" id="footer-privacy-link" style="color: var(--cream); opacity: 0.8; text-decoration: underline; cursor: pointer;">Privacy Policy</a></p>
       <p>Do Good Party Box. Keeping parties and the planet in mind.</p>
     </div>
   </div>
@@ -1161,20 +1162,19 @@
 
   // Privacy policy modal
   const privacyModal = document.getElementById('privacy-modal');
-  const openPrivacyLink = document.getElementById('open-privacy-link');
   const closePrivacyButton = document.getElementById('close-privacy-modal');
 
-  if (openPrivacyLink) {
-    openPrivacyLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      privacyModal.style.display = 'flex';
-    });
+  function openPrivacyModal(e) {
+    e.preventDefault();
+    privacyModal.style.display = 'flex';
+  }
+
+  function closePrivacyModal() {
+    privacyModal.style.display = 'none';
   }
 
   if (closePrivacyButton) {
-    closePrivacyButton.addEventListener('click', () => {
-      privacyModal.style.display = 'none';
-    });
+    closePrivacyButton.addEventListener('click', closePrivacyModal);
   }
 
   // Close modal when clicking outside of it
@@ -1183,6 +1183,19 @@
       privacyModal.style.display = 'none';
     }
   });
+
+  // Attach privacy modal handler to static link
+  const staticPrivacyLink = document.getElementById('open-privacy-link');
+  if (staticPrivacyLink) {
+    staticPrivacyLink.addEventListener('click', openPrivacyModal);
+  }
+
+  // Attach privacy modal handler to footer link
+  const footerPrivacyLink = document.getElementById('footer-privacy-link');
+  if (footerPrivacyLink) {
+    footerPrivacyLink.addEventListener('click', openPrivacyModal);
+  }
+
 </script>
 
 </body>
