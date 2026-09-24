@@ -162,32 +162,23 @@ app.get('/api/availability', async (req, res) => {
 // Diagnostic endpoint
 app.get('/api/debug', async (req, res) => {
   try {
-    const doc = new GoogleSpreadsheet(process.env.SHEET_ID);
+    const rows = await getSheetData();
     
-    const serviceAccountAuth = new JWT({
-      email: process.env.GOOGLE_CLIENT_EMAIL,
-      key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-      scopes: [
-        'https://www.googleapis.com/auth/spreadsheets',
-        'https://www.googleapis.com/auth/drive'
-      ]
-    });
-
-    doc.auth = serviceAccountAuth;
-    await doc.loadInfo();
-    const sheet = doc.sheetsByTitle['Bookings'];
+    if (rows.length === 0) {
+      return res.json({ success: true, message: 'No rows in sheet' });
+    }
     
-    // Load header row
-    await sheet.loadHeaderRow();
+    const firstRow = rows[0];
     
-    // Get the header row
-    const headerValues = sheet.headerValues;
+    // Log the raw row object to see its structure
+    const rowKeys = Object.keys(firstRow);
     
-    const rows = await sheet.getRows();
     const data = rows.map((row, idx) => {
       const fields = {};
-      headerValues.forEach(header => {
-        fields[header] = row.get(header);
+      rowKeys.forEach(key => {
+        if (!key.startsWith('_')) {
+          fields[key] = row[key];
+        }
       });
       return {
         rowIndex: idx,
@@ -195,7 +186,11 @@ app.get('/api/debug', async (req, res) => {
       };
     });
     
-    res.json({ success: true, headers: headerValues, rows: data });
+    res.json({ 
+      success: true, 
+      rowKeys: rowKeys,
+      rows: data 
+    });
   } catch (error) {
     res.json({ success: false, error: error.message, stack: error.stack });
   }
