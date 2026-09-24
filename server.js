@@ -170,7 +170,8 @@ app.get('/api/debug', async (req, res) => {
       kit2Booked: row.get('Kit 2 Booked'),
       status: row.get('Status'),
       collectionDate: row.get('Collection Date'),
-      returnDate: row.get('Expected Return Date')
+      returnDate: row.get('Expected Return Date'),
+      allFields: Object.fromEntries(row._rawData)
     }));
     res.json({ success: true, rows: data });
   } catch (error) {
