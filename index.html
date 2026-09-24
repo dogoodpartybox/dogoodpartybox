@@ -769,6 +769,29 @@
   </div>
 </section>
 
+  </section>
+
+  <!-- PRIVACY POLICY -->
+  <section id="privacy-policy" style="background: var(--cream); padding: 60px 20px; max-width: 1000px; margin: 0 auto;">
+    <div class="container" style="max-width: 800px;">
+      <h2 style="color: var(--primary); margin-bottom: 30px;">Privacy Policy</h2>
+      
+      <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">What information we collect</h3>
+      <p>When you submit an unavailable date enquiry form, we collect your name, email address, postcode, number of guests, and any notes you provide. This information is used solely to respond to your enquiry about party box availability.</p>
+      
+      <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">How we use your information</h3>
+      <p>We use your information to contact you about your specific enquiry and may contact you about Do Good Party Box offers or future availability. We do not share your information with third parties and do not use it for any purpose other than responding to your enquiry and marketing our services to you.</p>
+      
+      <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">How long we keep your data</h3>
+      <p>We retain your enquiry information for 12 months from the date of submission, unless you request deletion sooner.</p>
+      
+      <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">Your rights</h3>
+      <p>You have the right to request access to your data, ask us to correct or delete it, or object to us contacting you. To exercise these rights, please email <a href="mailto:hello@dogoodpartybox.co.uk" style="color: var(--primary); text-decoration: underline;">hello@dogoodpartybox.co.uk</a>.</p>
+      
+      <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 0.9rem; color: #666;">Last updated: September 2026</p>
+    </div>
+  </section>
+
 <footer>
   <div class="wrap">
     <div class="footer-content">
@@ -1024,7 +1047,7 @@
             
             <div class="form-group">
               <label>Postcode</label>
-              <input type="text" id="enquiry-postcode" class="form-control" placeholder="e.g. CO1 2TP">
+              <input type="text" id="enquiry-postcode" class="form-control" placeholder="e.g. SW1A 2AA">
             </div>
             
             <div class="form-group">
@@ -1034,13 +1057,13 @@
             
             <div class="form-group">
               <label>Any other requirements or notes</label>
-              <textarea id="enquiry-notes" class="form-control" placeholder="e.g. specific colours needed, dietary info, etc." rows="3"></textarea>
+              <textarea id="enquiry-notes" class="form-control" placeholder="e.g. specific colours needed, party theme, etc." rows="3"></textarea>
             </div>
             
             <div class="form-group" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(0,0,0,0.1);">
               <label style="display: flex; align-items: flex-start; font-weight: normal;">
                 <input type="checkbox" id="privacy-consent" style="margin-right: 10px; margin-top: 4px; cursor: pointer;">
-                <span style="font-size: 0.85rem; line-height: 1.4;">I agree to be contacted about my enquiry. We'll use your details to respond to your enquiry and may contact you about Do Good Party Box offers. See our <a href="/privacy" style="color: var(--primary); text-decoration: underline;">privacy policy</a> for details on how we handle your data.</span>
+                <span style="font-size: 0.85rem; line-height: 1.4;">I agree to be contacted about my enquiry and to receive reminders about upcoming party dates. We may also contact you about Do Good Party Box offers. See our <a href="#privacy-policy" style="color: var(--primary); text-decoration: underline;">privacy policy</a> for details on how we handle your data.</span>
               </label>
             </div>
             
@@ -1096,11 +1119,12 @@
               msg.className = 'form-message success';
               msg.style.display = 'block';
               
-              // Clear form
-              document.getElementById('enquiry-guests').value = '';
-              document.getElementById('enquiry-postcode').value = '';
-              document.getElementById('enquiry-email').value = '';
-              document.getElementById('enquiry-notes').value = '';
+              // Close form after 2 seconds and scroll to top
+              setTimeout(() => {
+                container.style.display = 'none';
+                window.scrollTo(0, 0);
+              }, 2000);
+              
               btn.textContent = 'Get in Touch';
             } else {
               msg.textContent = 'There was an error. Please try emailing hello@dogoodpartybox.co.uk';
