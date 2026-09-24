@@ -162,18 +162,37 @@ app.get('/api/availability', async (req, res) => {
 // Diagnostic endpoint
 app.get('/api/debug', async (req, res) => {
   try {
-    const rows = await getSheetData();
-    const data = rows.map((row, idx) => ({
-      rowIndex: idx,
-      bookingId: row.get('Booking ID'),
-      kit1Booked: row.get('Kit 1 Booked'),
-      kit2Booked: row.get('Kit 2 Booked'),
-      status: row.get('Status'),
-      collectionDate: row.get('Collection Date'),
-      returnDate: row.get('Expected Return Date'),
-      allFields: Object.fromEntries(row._rawData)
-    }));
-    res.json({ success: true, rows: data });
+    const doc = new GoogleSpreadsheet(process.env.SHEET_ID);
+    
+    const serviceAccountAuth = new JWT({
+      email: process.env.GOOGLE_CLIENT_EMAIL,
+      key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      scopes: [
+        'https://www.googleapis.com/auth/spreadsheets',
+        'https://www.googleapis.com/auth/drive'
+      ]
+    });
+
+    doc.auth = serviceAccountAuth;
+    await doc.loadInfo();
+    const sheet = doc.sheetsByTitle['Bookings'];
+    
+    // Get the header row
+    const headerValues = sheet.headerValues;
+    
+    const rows = await sheet.getRows();
+    const data = rows.map((row, idx) => {
+      const fields = {};
+      headerValues.forEach(header => {
+        fields[header] = row.get(header);
+      });
+      return {
+        rowIndex: idx,
+        fields: fields
+      };
+    });
+    
+    res.json({ success: true, headers: headerValues, rows: data });
   } catch (error) {
     res.json({ success: false, error: error.message, stack: error.stack });
   }
