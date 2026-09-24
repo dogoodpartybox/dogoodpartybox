@@ -63,47 +63,72 @@ async function isDateAvailable(partyDateStr) {
   today.setHours(0, 0, 0, 0);
   partyDate.setHours(0, 0, 0, 0);
   
+  console.log(`Checking availability for party date: ${partyDate.toISOString()}`);
+  
   // Block same-day bookings
   if (partyDate.getTime() === today.getTime()) {
+    console.log('Date is today - unavailable');
     return false;
   }
   
   try {
     const rows = await getSheetData();
+    console.log(`Retrieved ${rows.length} rows from sheet`);
     
     let kit1Booked = false;
     let kit2Booked = false;
     
-    for (const row of rows) {
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
       const status = row.get('Status');
+      console.log(`Row ${i}: Status="${status}"`);
       
-      if (status !== 'Confirmed') continue;
+      if (status !== 'Confirmed') {
+        console.log(`  Skipping - status is not Confirmed`);
+        continue;
+      }
       
       const collectionDateStr = row.get('Collection Date');
       const returnDateStr = row.get('Expected Return Date');
+      console.log(`  Collection Date: "${collectionDateStr}", Return Date: "${returnDateStr}"`);
       
-      if (!collectionDateStr || !returnDateStr) continue;
+      if (!collectionDateStr || !returnDateStr) {
+        console.log(`  Skipping - missing date fields`);
+        continue;
+      }
       
       const collectionDate = parseGoogleSheetDate(collectionDateStr);
       const returnDate = parseGoogleSheetDate(returnDateStr);
+      console.log(`  Parsed dates: collection=${collectionDate?.toISOString()}, return=${returnDate?.toISOString()}`);
       
-      if (!collectionDate || !returnDate) continue;
+      if (!collectionDate || !returnDate) {
+        console.log(`  Skipping - failed to parse dates`);
+        continue;
+      }
       
       // Check if party date falls within blocked range
-      if (partyDate >= collectionDate && partyDate <= returnDate) {
+      const isInRange = partyDate >= collectionDate && partyDate <= returnDate;
+      console.log(`  Party date in range? ${isInRange}`);
+      
+      if (isInRange) {
         const kit1 = row.get('Kit 1 Booked');
         const kit2 = row.get('Kit 2 Booked');
+        console.log(`    Kit 1 Booked: "${kit1}", Kit 2 Booked: "${kit2}"`);
         
         if (kit1 && kit1.toLowerCase().includes('kit 1')) {
           kit1Booked = true;
+          console.log(`    Kit 1 marked as booked`);
         }
         if (kit2 && kit2.toLowerCase().includes('kit 2')) {
           kit2Booked = true;
+          console.log(`    Kit 2 marked as booked`);
         }
       }
     }
     
-    return !(kit1Booked && kit2Booked);
+    const available = !(kit1Booked && kit2Booked);
+    console.log(`Final result: Kit1Booked=${kit1Booked}, Kit2Booked=${kit2Booked}, Available=${available}`);
+    return available;
   } catch (error) {
     console.error('Error checking availability:', error);
     return true; // Default to available on error
