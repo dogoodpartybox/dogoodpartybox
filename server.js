@@ -177,6 +177,9 @@ app.get('/api/debug', async (req, res) => {
     await doc.loadInfo();
     const sheet = doc.sheetsByTitle['Bookings'];
     
+    // Load header row
+    await sheet.loadHeaderRow();
+    
     // Get the header row
     const headerValues = sheet.headerValues;
     
