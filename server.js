@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { GoogleSpreadsheet } = require('google-spreadsheet');
+const { JWT } = require('google-auth-library');
 require('dotenv').config();
 
 const app = express();
@@ -21,18 +22,21 @@ const BUSINESS_LNG = 0.9175324384470639;
 // Initialize Google Sheets
 async function getSheetData() {
   try {
-    const doc = new GoogleSpreadsheet(process.env.SHEET_ID);
-    
     // Validate environment variables
     if (!process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
       throw new Error('Missing Google credentials in environment variables');
     }
-    
-    await doc.useServiceAccountAuth({
-      client_email: process.env.GOOGLE_CLIENT_EMAIL,
-      private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-      type: 'service_account'
+
+    const serviceAccountAuth = new JWT({
+      email: process.env.GOOGLE_CLIENT_EMAIL,
+      key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      scopes: [
+        'https://www.googleapis.com/auth/spreadsheets',
+        'https://www.googleapis.com/auth/drive'
+      ]
     });
+
+    const doc = new GoogleSpreadsheet(process.env.SHEET_ID, serviceAccountAuth);
     
     await doc.loadInfo();
     const sheet = doc.sheetsByTitle['Bookings'];
