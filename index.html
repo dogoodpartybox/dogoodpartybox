@@ -447,6 +447,45 @@
     background:rgba(47,139,110,0.1);
     color:var(--primary);
   }
+  .form-message.success{
+    background:rgba(47,139,110,0.1);
+    color:var(--primary);
+  }
+  
+  .unavailable-enquiry{
+    margin-top:20px;
+    padding:20px;
+    background:rgba(47,139,110,0.05);
+    border:1px solid rgba(47,139,110,0.2);
+    border-radius:8px;
+  }
+  .unavailable-message{
+    color:var(--dark);
+    margin-bottom:15px;
+    font-size:0.95rem;
+    line-height:1.5;
+  }
+  .enquiry-form .form-group{
+    margin-bottom:15px;
+  }
+  .enquiry-form label{
+    display:block;
+    font-weight:600;
+    margin-bottom:6px;
+    font-size:0.9rem;
+    color:var(--dark);
+  }
+  .enquiry-form .form-control{
+    width:100%;
+    padding:10px;
+    border:1px solid #ddd;
+    border-radius:4px;
+    font-size:0.95rem;
+    font-family:inherit;
+  }
+  .enquiry-form textarea{
+    resize:vertical;
+  }
 
   /* FOOTER */
   footer{
@@ -957,18 +996,128 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ partyDate: partyDate, available: false })
-          }).catch(() => {}); // Silent fail if tracking doesn't work
+          }).catch(() => {});
         } catch (e) {}
         
-        // Show message with contact link
-        let message = document.getElementById('party-date-message');
-        if (!message) {
-          message = document.createElement('div');
-          message.id = 'party-date-message';
-          message.className = 'form-message error';
-          partyDateInput.parentNode.appendChild(message);
+        // Show unavailable message and enquiry form
+        let container = document.getElementById('unavailable-enquiry-container');
+        if (!container) {
+          container = document.createElement('div');
+          container.id = 'unavailable-enquiry-container';
+          container.className = 'unavailable-enquiry';
+          partyDateInput.parentNode.appendChild(container);
         }
-        message.innerHTML = 'This date is currently full, but please <a href="mailto:hello@dogoodpartybox.co.uk?subject=Party%20Box%20Booking%20Enquiry%20-%20' + partyDate + '">contact us</a> about your requirements.';
+        
+        container.innerHTML = `
+          <p class="unavailable-message">This date is currently full. If you'd like us to contact you about alternative dates, a waitlist, or other options, please leave your details below.</p>
+          
+          <div class="enquiry-form">
+            <div class="form-group">
+              <label>Party Date</label>
+              <input type="text" value="${partyDate}" disabled class="form-control" style="background-color: #f5f1e8; cursor: not-allowed;">
+            </div>
+            
+            <div class="form-group">
+              <label>Number of Guests</label>
+              <input type="number" id="enquiry-guests" class="form-control" placeholder="e.g. 15" min="1" max="100">
+            </div>
+            
+            <div class="form-group">
+              <label>Postcode</label>
+              <input type="text" id="enquiry-postcode" class="form-control" placeholder="e.g. CO1 2TP">
+            </div>
+            
+            <div class="form-group">
+              <label>Contact Email</label>
+              <input type="email" id="enquiry-email" class="form-control" placeholder="your@email.com">
+            </div>
+            
+            <div class="form-group">
+              <label>Any other requirements or notes</label>
+              <textarea id="enquiry-notes" class="form-control" placeholder="e.g. specific colours needed, dietary info, etc." rows="3"></textarea>
+            </div>
+            
+            <div class="form-group" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(0,0,0,0.1);">
+              <label style="display: flex; align-items: flex-start; font-weight: normal;">
+                <input type="checkbox" id="privacy-consent" style="margin-right: 10px; margin-top: 4px; cursor: pointer;">
+                <span style="font-size: 0.85rem; line-height: 1.4;">I agree to be contacted about my enquiry. We'll use your details to respond to your enquiry and may contact you about Do Good Party Box offers. See our <a href="/privacy" style="color: var(--primary); text-decoration: underline;">privacy policy</a> for details on how we handle your data.</span>
+              </label>
+            </div>
+            
+            <button type="button" id="submit-enquiry-btn" class="btn btn-primary" style="width: 100%; margin-top: 15px;">Get in Touch</button>
+            <p id="enquiry-message" class="form-message" style="margin-top: 10px; display: none;"></p>
+          </div>
+        `;
+        
+        // Add submit handler
+        document.getElementById('submit-enquiry-btn').addEventListener('click', async () => {
+          const guests = document.getElementById('enquiry-guests').value;
+          const postcode = document.getElementById('enquiry-postcode').value;
+          const email = document.getElementById('enquiry-email').value;
+          const notes = document.getElementById('enquiry-notes').value;
+          const privacyConsent = document.getElementById('privacy-consent').checked;
+          const btn = document.getElementById('submit-enquiry-btn');
+          const msg = document.getElementById('enquiry-message');
+          
+          if (!guests || !postcode || !email) {
+            msg.textContent = 'Please fill in all required fields';
+            msg.className = 'form-message error';
+            msg.style.display = 'block';
+            return;
+          }
+          
+          if (!privacyConsent) {
+            msg.textContent = 'Please agree to be contacted to proceed';
+            msg.className = 'form-message error';
+            msg.style.display = 'block';
+            return;
+          }
+          
+          try {
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+            
+            const response = await fetch(`${BACKEND_URL}/api/unavailable-enquiry`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                partyDate: partyDate,
+                guests: guests,
+                postcode: postcode,
+                email: email,
+                notes: notes
+              })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+              msg.textContent = 'Thanks! We\'ll be in touch soon.';
+              msg.className = 'form-message success';
+              msg.style.display = 'block';
+              
+              // Clear form
+              document.getElementById('enquiry-guests').value = '';
+              document.getElementById('enquiry-postcode').value = '';
+              document.getElementById('enquiry-email').value = '';
+              document.getElementById('enquiry-notes').value = '';
+              btn.textContent = 'Get in Touch';
+            } else {
+              msg.textContent = 'There was an error. Please try emailing hello@dogoodpartybox.co.uk';
+              msg.className = 'form-message error';
+              msg.style.display = 'block';
+              btn.textContent = 'Get in Touch';
+            }
+            btn.disabled = false;
+          } catch (error) {
+            console.error('Error submitting enquiry:', error);
+            msg.textContent = 'Error sending enquiry. Please try emailing hello@dogoodpartybox.co.uk';
+            msg.className = 'form-message error';
+            msg.style.display = 'block';
+            btn.textContent = 'Get in Touch';
+            btn.disabled = false;
+          }
+        });
       } else {
         // Date is available
         partyDateInput.style.borderColor = '';
@@ -976,8 +1125,8 @@
         bookButton.style.opacity = '1';
         bookButton.style.cursor = 'pointer';
         
-        const message = document.getElementById('party-date-message');
-        if (message) message.remove();
+        const container = document.getElementById('unavailable-enquiry-container');
+        if (container) container.remove();
       }
     } catch (error) {
       console.error('Availability check failed:', error);
