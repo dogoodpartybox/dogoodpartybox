@@ -155,6 +155,25 @@ app.get('/api/availability', async (req, res) => {
   }
 });
 
+// Diagnostic endpoint
+app.get('/api/debug', async (req, res) => {
+  try {
+    const rows = await getSheetData();
+    const data = rows.map((row, idx) => ({
+      rowIndex: idx,
+      bookingId: row.get('Booking ID'),
+      kit1Booked: row.get('Kit 1 Booked'),
+      kit2Booked: row.get('Kit 2 Booked'),
+      status: row.get('Status'),
+      collectionDate: row.get('Collection Date'),
+      returnDate: row.get('Expected Return Date')
+    }));
+    res.json({ success: true, rows: data });
+  } catch (error) {
+    res.json({ success: false, error: error.message, stack: error.stack });
+  }
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
