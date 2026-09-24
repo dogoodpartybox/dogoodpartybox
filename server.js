@@ -84,7 +84,16 @@ async function isDateAvailable(partyDateStr) {
     
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      const status = row.get('Status');
+      const rawData = row._rawData;
+      
+      // Column indices from raw data:
+      // 1: Kit 1 Booked
+      // 2: Kit 2 Booked
+      // 6: Collection Date
+      // 8: Expected Return Date
+      // 11: Status
+      
+      const status = rawData[11];
       console.log(`Row ${i}: Status="${status}"`);
       
       if (status !== 'Confirmed') {
@@ -92,8 +101,8 @@ async function isDateAvailable(partyDateStr) {
         continue;
       }
       
-      const collectionDateStr = row.get('Collection Date');
-      const returnDateStr = row.get('Expected Return Date');
+      const collectionDateStr = rawData[6];
+      const returnDateStr = rawData[8];
       console.log(`  Collection Date: "${collectionDateStr}", Return Date: "${returnDateStr}"`);
       
       if (!collectionDateStr || !returnDateStr) {
@@ -115,8 +124,8 @@ async function isDateAvailable(partyDateStr) {
       console.log(`  Party date in range? ${isInRange}`);
       
       if (isInRange) {
-        const kit1 = row.get('Kit 1 Booked');
-        const kit2 = row.get('Kit 2 Booked');
+        const kit1 = rawData[1];
+        const kit2 = rawData[2];
         console.log(`    Kit 1 Booked: "${kit1}", Kit 2 Booked: "${kit2}"`);
         
         if (kit1 && kit1.toLowerCase().includes('kit 1')) {
