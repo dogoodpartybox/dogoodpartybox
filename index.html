@@ -1024,19 +1024,6 @@
     selectedDate.setHours(0, 0, 0, 0);
     
     if (selectedDate <= today) {
-      partyDateInput.style.borderColor = '#c83232';
-      bookButton.disabled = true;
-      bookButton.style.opacity = '0.5';
-      bookButton.style.cursor = 'not-allowed';
-      
-      let message = document.getElementById('party-date-message');
-      if (!message) {
-        message = document.createElement('p');
-        message.id = 'party-date-message';
-        message.className = 'form-message error';
-        partyDateInput.parentNode.appendChild(message);
-      }
-      message.textContent = 'Please select a future date.';
       return;
     }
     
