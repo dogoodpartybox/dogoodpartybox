@@ -242,18 +242,27 @@ async function isDateAvailable(partyDateStr) {
       console.log(`Booking ID[0]: "${rawData[0]}"`);
       console.log(`Pastel Booked[1]: "${rawData[1]}"`);
       console.log(`Bright Booked[2]: "${rawData[2]}"`);
-      console.log(`Status[13]: "${rawData[13]}"`);
+      console.log(`First Name[3]: "${rawData[3]}"`);
+      console.log(`Last Name[4]: "${rawData[4]}"`);
+      console.log(`Customer Email[5]: "${rawData[5]}"`);
+      console.log(`Party Date[6]: "${rawData[6]}"`);
+      console.log(`Collection Date[7]: "${rawData[7]}"`);
+      console.log(`Collection Time[8]: "${rawData[8]}"`);
+      console.log(`Delivery Date[9]: "${rawData[9]}"`);
+      console.log(`Delivery Time[10]: "${rawData[10]}"`);
+      console.log(`Expected Return Date[11]: "${rawData[11]}"`);
+      console.log(`Status[14]: "${rawData[14]}"`);
       
-      const status = rawData[13];
+      const status = rawData[14];
       if (status !== 'Confirmed') {
         console.log(`  → Skipping - status is "${status}" (not Confirmed)`);
         continue;
       }
       
       // Get both collection and delivery dates
-      const collectionDateStr = rawData[6];
-      const deliveryDateStr = rawData[8];
-      const returnDateStr = rawData[10];
+      const collectionDateStr = rawData[7];
+      const deliveryDateStr = rawData[9];
+      const returnDateStr = rawData[11];
       
       // For availability purposes, use whichever date is populated (collection or delivery)
       const bookingDateStr = collectionDateStr || deliveryDateStr;
@@ -354,9 +363,9 @@ app.get('/api/availability', async (req, res) => {
 
 // Handle unavailable date enquiry submissions
 app.post('/api/unavailable-enquiry', async (req, res) => {
-  const { partyDate, guests, postcode, email, notes } = req.body;
+  const { partyDate, firstName, lastName, guests, postcode, email, notes } = req.body;
   
-  if (!partyDate || !guests || !postcode || !email) {
+  if (!partyDate || !firstName || !lastName || !guests || !postcode || !email) {
     return res.status(400).json({ success: false, error: 'Missing required fields' });
   }
   
@@ -380,7 +389,7 @@ app.post('/api/unavailable-enquiry', async (req, res) => {
       // Create the sheet if it doesn't exist
       sheet = await doc.addSheet({
         title: 'Unavailable Enquiries',
-        headerValues: ['Timestamp', 'Party Date', 'Guests', 'Postcode', 'Email', 'Notes']
+        headerValues: ['Timestamp', 'Party Date', 'First Name', 'Last Name', 'Guests', 'Postcode', 'Email', 'Notes']
       });
     }
     
@@ -389,6 +398,8 @@ app.post('/api/unavailable-enquiry', async (req, res) => {
       {
         'Timestamp': new Date().toISOString(),
         'Party Date': partyDate,
+        'First Name': firstName,
+        'Last Name': lastName,
         'Guests': guests,
         'Postcode': postcode,
         'Email': email,
@@ -411,6 +422,10 @@ app.post('/api/unavailable-enquiry', async (req, res) => {
           {
             type: 'section',
             fields: [
+              {
+                type: 'mrkdwn',
+                text: `*Name:*\n${firstName} ${lastName}`
+              },
               {
                 type: 'mrkdwn',
                 text: `*Party Date:*\n${partyDate}`
@@ -623,7 +638,8 @@ app.post('/api/stripe-webhook', async (req, res) => {
     const metadata = paymentIntent.metadata;
     const {
       customerEmail,
-      customerName,
+      firstName,
+      lastName,
       partyDate,
       guests,
       postcode,
@@ -673,23 +689,11 @@ app.post('/api/stripe-webhook', async (req, res) => {
       const bookingDeliveryDate = delivery === 'we-deliver' ? deliveryDate : '';
       const bookingDeliveryTime = delivery === 'we-deliver' ? deliveryTime : '';
 
-      // For return date calculation, use whichever date is relevant
-      let dateForReturnCalculation = bookingCollectionDate || bookingDeliveryDate;
-
-      // Calculate 3 business day return deadline from collection/delivery date
-      let returnDate = new Date();
-      if (dateForReturnCalculation) {
-        returnDate = new Date(dateForReturnCalculation);
-      }
-
-      let businessDaysAdded = 0;
-      while (businessDaysAdded < 3) {
-        returnDate.setDate(returnDate.getDate() + 1);
-        const dayOfWeek = returnDate.getDay();
-        if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Skip weekends
-          businessDaysAdded++;
-        }
-      }
+      // For return date calculation, use party date (not collection/delivery date)
+      let returnDate = new Date(partyDate);
+      
+      // Add exactly 3 days (calendar days, not business days)
+      returnDate.setDate(returnDate.getDate() + 3);
       const returnDateFormatted = returnDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '/');
 
       // Convert party date to DD/MM/YYYY format
@@ -705,7 +709,8 @@ app.post('/api/stripe-webhook', async (req, res) => {
         'Booking ID': `BK-${Date.now()}`,
         'Pastel Booked': pastelBooked,
         'Bright Booked': brightBooked,
-        'Customer Name': customerName || 'Not provided',
+        'First Name': firstName || 'Not provided',
+        'Last Name': lastName || 'Not provided',
         'Customer Email': customerEmail,
         'Party Date': partyDateFormatted,
         'Collection Date': collectionDateFormatted,
@@ -719,19 +724,19 @@ app.post('/api/stripe-webhook', async (req, res) => {
         'Payment receipt sent': 'Yes'
       }]);
 
-      console.log(`Booking added to sheet for ${customerName}: ${partyDateFormatted}`);
+      console.log(`Booking added to sheet for ${firstName} ${lastName}: ${partyDateFormatted}`);
 
       // Send payment receipt email (detailed version based on delivery method)
       let receiptText, receiptHtml;
 
       if (delivery === 'collect') {
         const collectionTimeDisplay = getTimeWindowDisplay(bookingCollectionTime);
-        receiptText = `Hi ${customerName},\n\nGreat! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.\n\nYour booking is confirmed for ${partyDateFormatted}.\n\nCollection details:\nDate: ${collectionDateFormatted}\nTime window: ${collectionTimeDisplay}\nLocation: 32 East Street, Colchester, CO1 2TP\n\nLook for the black gate with the yellow number 32. The door is at the end of the path.\n\nPlease return the kit to our back door within 3 business days.\n\nThanks for supporting a better way to party.\n\nDo better, Do Good.\n\nCheers,\nCaro & Henry\nThe DGPB Team`;
-        receiptHtml = `<p>Hi ${customerName},</p><p>Great! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.</p><p>Your booking is confirmed for <strong>${partyDateFormatted}</strong>.</p><h3>Collection details</h3><p><strong>Date:</strong> ${collectionDateFormatted}<br><strong>Time window:</strong> ${collectionTimeDisplay}<br><strong>Location:</strong> 32 East Street, Colchester, CO1 2TP</p><p>Look for the black gate with the yellow number 32. The door is at the end of the path.</p><p>Please return the kit to our back door within 3 business days.</p><p>Thanks for supporting a better way to party.</p><p>Do better, Do Good.</p><p>Cheers,<br>Caro & Henry<br>The DGPB Team</p>`;
+        receiptText = `Hi ${firstName},\n\nGreat! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.\n\nYour booking is confirmed for ${partyDateFormatted}.\n\nCollection details:\nDate: ${collectionDateFormatted}\nTime window: ${collectionTimeDisplay}\nLocation: 32 East Street, Colchester, CO1 2TP\n\nLook for the black gate with the yellow number 32. The door is at the end of the path.\n\nPlease return the kit by ${returnDateFormatted}.\n\nThanks for supporting a better way to party.\n\nDo better, Do Good.\n\nCheers,\nCaro & Henry\nThe DGPB Team`;
+        receiptHtml = `<p>Hi ${firstName},</p><p>Great! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.</p><p>Your booking is confirmed for <strong>${partyDateFormatted}</strong>.</p><h3>Collection details</h3><p><strong>Date:</strong> ${collectionDateFormatted}<br><strong>Time window:</strong> ${collectionTimeDisplay}<br><strong>Location:</strong> 32 East Street, Colchester, CO1 2TP</p><p>Look for the black gate with the yellow number 32. The door is at the end of the path.</p><p>Please return the kit by <strong>${returnDateFormatted}</strong>.</p><p>Thanks for supporting a better way to party.</p><p>Do better, Do Good.</p><p>Cheers,<br>Caro & Henry<br>The DGPB Team</p>`;
       } else {
         const deliveryTimeDisplay = getTimeWindowDisplay(bookingDeliveryTime);
-        receiptText = `Hi ${customerName},\n\nGreat! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.\n\nYour booking is confirmed for ${partyDateFormatted}.\n\nDelivery details:\nPreferred date: ${deliveryDateFormatted}\nPreferred window: ${deliveryTimeDisplay}\n\nWe'll contact you to confirm the exact time within your preferred window.\n\nPlease return the kit to our back door within 3 business days and we'll collect it.\n\nThanks for supporting a better way to party.\n\nDo better, Do Good.\n\nCheers,\nCaro & Henry\nThe DGPB Team`;
-        receiptHtml = `<p>Hi ${customerName},</p><p>Great! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.</p><p>Your booking is confirmed for <strong>${partyDateFormatted}</strong>.</p><h3>Delivery details</h3><p><strong>Preferred date:</strong> ${deliveryDateFormatted}<br><strong>Preferred window:</strong> ${deliveryTimeDisplay}</p><p>We'll contact you to confirm the exact time within your preferred window.</p><p>Please return the kit to our back door within 3 business days and we'll collect it.</p><p>Thanks for supporting a better way to party.</p><p>Do better, Do Good.</p><p>Cheers,<br>Caro & Henry<br>The DGPB Team</p>`;
+        receiptText = `Hi ${firstName},\n\nGreat! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.\n\nYour booking is confirmed for ${partyDateFormatted}.\n\nDelivery details:\nPreferred date: ${deliveryDateFormatted}\nPreferred window: ${deliveryTimeDisplay}\n\nWe'll contact you to confirm the exact time within your preferred window.\n\nPlease return the kit by ${returnDateFormatted} and we'll collect it from you.\n\nThanks for supporting a better way to party.\n\nDo better, Do Good.\n\nCheers,\nCaro & Henry\nThe DGPB Team`;
+        receiptHtml = `<p>Hi ${firstName},</p><p>Great! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.</p><p>Your booking is confirmed for <strong>${partyDateFormatted}</strong>.</p><h3>Delivery details</h3><p><strong>Preferred date:</strong> ${deliveryDateFormatted}<br><strong>Preferred window:</strong> ${deliveryTimeDisplay}</p><p>We'll contact you to confirm the exact time within your preferred window.</p><p>Please return the kit by <strong>${returnDateFormatted}</strong> and we'll collect it from you.</p><p>Thanks for supporting a better way to party.</p><p>Do better, Do Good.</p><p>Cheers,<br>Caro & Henry<br>The DGPB Team</p>`;
       }
 
       const mailOptions = {
