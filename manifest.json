@@ -1,0 +1,17 @@
+{
+  "name": "Do Good Party Box",
+  "short_name": "DGPB",
+  "description": "Reusable kids party catering equipment hire. Do better, Do Good.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5F1E8",
+  "theme_color": "#2F8B6E",
+  "icons": [
+    {
+      "src": "favicon-small.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
