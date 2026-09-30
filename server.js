@@ -629,8 +629,8 @@ app.post('/api/stripe-webhook', async (req, res) => {
       } else if (colour === 'bright') {
         brightBooked = 'Bright';
       } else if (colour === 'no-preference') {
-        // For no preference, default to Pastel if available, otherwise Bright
-        pastelBooked = 'Pastel (auto-assigned)';
+        // For no preference, default to Pastel
+        pastelBooked = 'Pastel';
       }
 
       // Determine collection/delivery details
@@ -639,12 +639,13 @@ app.post('/api/stripe-webhook', async (req, res) => {
       const bookingDeliveryDate = delivery === 'we-deliver' ? deliveryDate : '';
       const bookingDeliveryTime = delivery === 'we-deliver' ? deliveryTime : '';
 
+      // For return date calculation, use whichever date is relevant
+      let dateForReturnCalculation = bookingCollectionDate || bookingDeliveryDate;
+
       // Calculate 3 business day return deadline from collection/delivery date
       let returnDate = new Date();
-      if (bookingCollectionDate) {
-        returnDate = new Date(bookingCollectionDate);
-      } else if (bookingDeliveryDate) {
-        returnDate = new Date(bookingDeliveryDate);
+      if (dateForReturnCalculation) {
+        returnDate = new Date(dateForReturnCalculation);
       }
 
       let businessDaysAdded = 0;
@@ -673,7 +674,7 @@ app.post('/api/stripe-webhook', async (req, res) => {
         'Customer Name': customerName || 'Not provided',
         'Customer Email': customerEmail,
         'Party Date': partyDateFormatted,
-        'Collection Date': collectionDateFormatted || (delivery === 'we-deliver' ? deliveryDateFormatted : ''),
+        'Collection Date': collectionDateFormatted,
         'Collection Time': bookingCollectionTime,
         'Expected Return Date': returnDateFormatted,
         'Washing Service': washing === 'we-wash' ? 'Yes' : 'No',
