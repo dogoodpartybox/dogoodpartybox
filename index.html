@@ -893,7 +893,7 @@
     const message = document.getElementById('delivery-message');
 
     if (distance > 10) {
-      message.innerHTML = 'Outside our standard delivery area. <a href="mailto:hello@dogoodpartybox.co.uk">Contact us</a> to discuss delivery, or select collection above.';
+      message.innerHTML = 'Outside our standard delivery area. <a href="mailto:hello@dogoodpartybox.co.uk">Contact us</a> to discuss delivery, or select collection below.';
       message.className = 'form-message error';
       
       // Disable "We deliver" option
@@ -1314,8 +1314,20 @@
       return;
     }
 
+    if (delivery === 'collect' && !document.getElementById('collection-time').value) {
+      cardError.textContent = 'Please select a collection time window';
+      cardError.style.display = 'block';
+      return;
+    }
+
     if (delivery === 'we-deliver' && !document.getElementById('delivery-date').value) {
       cardError.textContent = 'Please select a delivery date';
+      cardError.style.display = 'block';
+      return;
+    }
+
+    if (delivery === 'we-deliver' && !document.getElementById('delivery-time').value) {
+      cardError.textContent = 'Please select a delivery time window';
       cardError.style.display = 'block';
       return;
     }
