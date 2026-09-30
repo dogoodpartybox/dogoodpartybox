@@ -1225,7 +1225,32 @@
   // Initialize Stripe
   const stripe = Stripe('pk_test_51ULLOgPmwMRCqbIYSW5d4ftxGEtlAxBumNl8ZOA1Pc0NUSCPOF8rHuZu4fNVN81K4Nui9OTXYn0HX9qSBV720EEW00EJHPEN1T');
   const elements = stripe.elements();
-  const cardElement = elements.create('card');
+  const cardElement = elements.create('card', {
+    hidePostalCode: true // Hide postal code as we collect it separately
+  });
+
+  // Only show card validation errors after user leaves the field or tries to submit
+  cardElement.on('blur', (event) => {
+    const cardError = document.getElementById('card-error');
+    if (event.error) {
+      cardError.textContent = event.error.message;
+      cardError.style.display = 'block';
+    }
+  });
+
+  cardElement.on('change', (event) => {
+    const cardError = document.getElementById('card-error');
+    if (event.error) {
+      // Only show errors after user has blurred the field (not on first render)
+      if (event.complete || event.empty) {
+        cardError.textContent = '';
+        cardError.style.display = 'none';
+      }
+    } else if (!event.empty) {
+      cardError.textContent = '';
+      cardError.style.display = 'none';
+    }
+  });
 
   // Show/hide delivery fields when delivery method changes
   document.getElementById('delivery').addEventListener('change', (e) => {
@@ -1262,20 +1287,24 @@
     const delivery = document.getElementById('delivery').value;
     const washing = document.getElementById('washing').value;
     const colour = document.getElementById('colour').value;
+    const cardError = document.getElementById('card-error');
 
     // Validation
     if (!fullname || !email || !postcode || !guests || !partyDate || !delivery || !washing) {
-      alert('Please fill in all required fields');
+      cardError.textContent = 'Please fill in all required fields';
+      cardError.style.display = 'block';
       return;
     }
 
     if (delivery === 'collect' && !document.getElementById('collection-date').value) {
-      alert('Please select a collection date');
+      cardError.textContent = 'Please select a collection date';
+      cardError.style.display = 'block';
       return;
     }
 
     if (delivery === 'we-deliver' && !document.getElementById('delivery-date').value) {
-      alert('Please select a delivery date');
+      cardError.textContent = 'Please select a delivery date';
+      cardError.style.display = 'block';
       return;
     }
 
@@ -1329,20 +1358,28 @@
         btn.disabled = false;
         btn.textContent = 'Confirm booking';
       } else if (paymentIntent.status === 'succeeded') {
-        alert('Payment successful! You will receive a confirmation email shortly.');
-        // Reset form
-        document.getElementById('party-date').value = '';
-        document.getElementById('guests').value = '';
-        document.getElementById('fullname').value = '';
-        document.getElementById('email').value = '';
-        document.getElementById('postcode').value = '';
-        document.getElementById('delivery').value = '';
-        document.getElementById('washing').value = '';
-        document.getElementById('colour').value = '';
-        cardElement.clear();
-        document.getElementById('payment-section').style.display = 'none';
-        btn.disabled = false;
-        btn.textContent = 'Confirm booking';
+        document.getElementById('card-error').textContent = 'Payment successful! You will receive a confirmation email shortly.';
+        document.getElementById('card-error').className = '';
+        document.getElementById('card-error').style.display = 'block';
+        document.getElementById('card-error').style.color = '#2F8B6E';
+        
+        // Reset form after 2 seconds
+        setTimeout(() => {
+          document.getElementById('party-date').value = '';
+          document.getElementById('guests').value = '';
+          document.getElementById('fullname').value = '';
+          document.getElementById('email').value = '';
+          document.getElementById('postcode').value = '';
+          document.getElementById('delivery').value = '';
+          document.getElementById('washing').value = '';
+          document.getElementById('colour').value = '';
+          cardElement.clear();
+          document.getElementById('payment-section').style.display = 'none';
+          document.getElementById('card-error').style.display = 'none';
+          document.getElementById('card-error').style.color = '';
+          btn.disabled = false;
+          btn.textContent = 'Confirm booking';
+        }, 2000);
       }
     } catch (error) {
       console.error('Payment error:', error);
