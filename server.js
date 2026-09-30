@@ -4,6 +4,7 @@ const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const nodemailer = require('nodemailer');
 const cron = require('node-cron');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 require('dotenv').config();
 
 const app = express();
@@ -62,12 +63,14 @@ function parseGoogleSheetDate(dateStr) {
   return date;
 }
 
-// Email configuration
+// Email configuration (Zoho Mail)
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.zoho.eu',
+  port: 465,
+  secure: true,
   auth: {
-    user: process.env.GMAIL_EMAIL,
-    pass: process.env.GMAIL_APP_PASSWORD
+    user: process.env.ZOHO_EMAIL,
+    pass: process.env.ZOHO_PASSWORD
   }
 });
 
@@ -483,6 +486,120 @@ app.get('/api/debug', async (req, res) => {
   } catch (error) {
     res.json({ success: false, error: error.message, stack: error.stack });
   }
+});
+
+// Create payment intent for Stripe
+app.post('/api/create-payment-intent', async (req, res) => {
+  try {
+    const { amount, currency = 'gbp', customerEmail, customerName } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ error: 'Invalid amount' });
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amount * 100), // Convert to pence
+      currency,
+      metadata: {
+        customerEmail,
+        customerName
+      }
+    });
+
+    res.json({
+      clientSecret: paymentIntent.client_secret,
+      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY
+    });
+  } catch (error) {
+    console.error('Error creating payment intent:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Stripe webhook handler
+app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!webhookSecret) {
+    console.warn('STRIPE_WEBHOOK_SECRET not set. Webhook signature verification skipped.');
+    return res.status(400).json({ error: 'Webhook secret not configured' });
+  }
+
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+  } catch (error) {
+    console.error('Webhook signature verification failed:', error.message);
+    return res.status(400).json({ error: `Webhook Error: ${error.message}` });
+  }
+
+  // Handle payment success
+  if (event.type === 'payment_intent.succeeded') {
+    const paymentIntent = event.data.object;
+    const { customerEmail, customerName } = paymentIntent.metadata;
+
+    try {
+      // Add booking to Google Sheets
+      const serviceAccountAuth = new JWT({
+        email: process.env.GOOGLE_CLIENT_EMAIL,
+        key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        scopes: [
+          'https://www.googleapis.com/auth/spreadsheets',
+          'https://www.googleapis.com/auth/drive'
+        ]
+      });
+
+      const doc = new GoogleSpreadsheet(process.env.SHEET_ID, serviceAccountAuth);
+      await doc.loadInfo();
+
+      const bookingsSheet = doc.sheetsByTitle['Bookings'];
+      if (!bookingsSheet) {
+        throw new Error('Bookings sheet not found');
+      }
+
+      // Calculate 3 business day return deadline
+      const returnDate = new Date();
+      let businessDaysAdded = 0;
+      while (businessDaysAdded < 3) {
+        returnDate.setDate(returnDate.getDate() + 1);
+        const dayOfWeek = returnDate.getDay();
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Skip weekends
+          businessDaysAdded++;
+        }
+      }
+      const returnDateFormatted = returnDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '/');
+
+      // Add row to Bookings sheet
+      await bookingsSheet.addRows([{
+        'Booking ID': `BK-${Date.now()}`,
+        'Customer Name': customerName || 'Not provided',
+        'Customer Email': customerEmail,
+        'Status': 'Confirmed',
+        'Payment receipt sent': 'Yes',
+        'Expected Return Date': returnDateFormatted
+      }]);
+
+      // Send payment receipt email
+      const mailOptions = {
+        from: process.env.ZOHO_EMAIL,
+        to: customerEmail,
+        subject: 'Your Do Good Party Box booking is confirmed – payment received',
+        text: `Hi ${customerName},\n\nGreat! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.\n\nYour booking is confirmed. You'll receive further details shortly.\n\nThanks for supporting a better way to party.\n\nDo better, Do Good.\n\nCheers,\nCaro & Henry\nThe DGPB Team`,
+        html: `<p>Hi ${customerName},</p><p>Great! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.</p><p>Your booking is confirmed. You'll receive further details shortly.</p><p>Thanks for supporting a better way to party.</p><p>Do better, Do Good.</p><p>Cheers,<br>Caro & Henry<br>The DGPB Team</p>`
+      };
+
+      await transporter.sendMail(mailOptions);
+      console.log(`Payment receipt sent to ${customerEmail}`);
+
+    } catch (error) {
+      console.error('Error processing payment confirmation:', error);
+      // Don't fail the webhook response even if email fails
+    }
+  }
+
+  res.json({ received: true });
 });
 
 // Health check
