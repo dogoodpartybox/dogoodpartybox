@@ -676,10 +676,12 @@ app.post('/api/stripe-webhook', async (req, res) => {
         'Party Date': partyDateFormatted,
         'Collection Date': collectionDateFormatted,
         'Collection Time': bookingCollectionTime,
+        'Delivery Date': deliveryDateFormatted,
+        'Delivery Time': bookingDeliveryTime,
         'Expected Return Date': returnDateFormatted,
-        'Washing Service': washing === 'we-wash' ? 'Yes' : 'No',
-        'Delivery Method': delivery === 'collect' ? 'Collection' : 'Delivery',
-        'Status': 'Confirmed',
+        'Washing Service (Y/N)': washing === 'we-wash' ? 'Yes' : 'No',
+        'Delivery Method (Collect/Deliver)': delivery === 'collect' ? 'Collection' : 'Delivery',
+        'Status (Confirmed/Pending/Cancelled)': 'Confirmed',
         'Payment receipt sent': 'Yes'
       }]);
 
