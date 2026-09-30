@@ -1036,12 +1036,35 @@
         return;
       }
       
-      if (!data.available) {
-        // Date is unavailable
+      // Update colour options based on availability
+      const colourSelect = document.getElementById('colour');
+      const colourOptions = colourSelect.querySelectorAll('option');
+      
+      // Re-enable all options first
+      colourOptions.forEach(option => {
+        option.disabled = false;
+      });
+      
+      // Disable unavailable colours
+      if (!data.pastelAvailable) {
+        const pastelOption = Array.from(colourOptions).find(opt => opt.value === 'pastel');
+        if (pastelOption) pastelOption.disabled = true;
+      }
+      if (!data.brightAvailable) {
+        const brightOption = Array.from(colourOptions).find(opt => opt.value === 'bright');
+        if (brightOption) brightOption.disabled = true;
+      }
+      
+      // Check if both kits are fully booked
+      const fullyBooked = !data.pastelAvailable && !data.brightAvailable;
+      
+      if (fullyBooked) {
+        // Date is completely unavailable
         partyDateInput.style.borderColor = '#c83232';
         bookButton.disabled = true;
         bookButton.style.opacity = '0.5';
         bookButton.style.cursor = 'not-allowed';
+        colourSelect.disabled = true;
         
         // Track unavailable search
         try {
@@ -1173,14 +1196,27 @@
           }
         });
       } else {
-        // Date is available
+        // Date is available (at least partially)
         partyDateInput.style.borderColor = '';
         bookButton.disabled = false;
         bookButton.style.opacity = '1';
         bookButton.style.cursor = 'pointer';
+        colourSelect.disabled = false;
         
+        // Remove unavailable enquiry form if it exists
         const container = document.getElementById('unavailable-enquiry-container');
         if (container) container.remove();
+        
+        // Show availability message below colour selector
+        let availabilityMsg = document.getElementById('colour-availability-message');
+        if (!availabilityMsg) {
+          availabilityMsg = document.createElement('p');
+          availabilityMsg.id = 'colour-availability-message';
+          availabilityMsg.style.cssText = 'font-size: 0.9rem; color: var(--primary); margin-top: 8px; margin-bottom: 15px;';
+          colourSelect.parentNode.appendChild(availabilityMsg);
+        }
+        availabilityMsg.textContent = data.message;
+        availabilityMsg.style.display = 'block';
       }
     } catch (error) {
       console.error('Availability check failed:', error);
