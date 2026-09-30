@@ -219,7 +219,11 @@ async function isDateAvailable(partyDateStr) {
   // Block same-day bookings
   if (partyDate.getTime() === today.getTime()) {
     console.log('Date is today - unavailable');
-    return false;
+    return {
+      pastelAvailable: false,
+      brightAvailable: false,
+      message: 'Same-day bookings are not available'
+    };
   }
   
   try {
@@ -238,16 +242,6 @@ async function isDateAvailable(partyDateStr) {
       console.log(`Booking ID[0]: "${rawData[0]}"`);
       console.log(`Pastel Booked[1]: "${rawData[1]}"`);
       console.log(`Bright Booked[2]: "${rawData[2]}"`);
-      console.log(`Customer Name[3]: "${rawData[3]}"`);
-      console.log(`Customer Email[4]: "${rawData[4]}"`);
-      console.log(`Party Date[5]: "${rawData[5]}"`);
-      console.log(`Collection Date[6]: "${rawData[6]}"`);
-      console.log(`Collection Time[7]: "${rawData[7]}"`);
-      console.log(`Delivery Date[8]: "${rawData[8]}"`);
-      console.log(`Delivery Time[9]: "${rawData[9]}"`);
-      console.log(`Expected Return Date[10]: "${rawData[10]}"`);
-      console.log(`Washing Service[11]: "${rawData[11]}"`);
-      console.log(`Delivery Method[12]: "${rawData[12]}"`);
       console.log(`Status[13]: "${rawData[13]}"`);
       
       const status = rawData[13];
@@ -260,12 +254,11 @@ async function isDateAvailable(partyDateStr) {
       const collectionDateStr = rawData[6];
       const deliveryDateStr = rawData[8];
       const returnDateStr = rawData[10];
-      const deliveryMethod = rawData[12];
       
       // For availability purposes, use whichever date is populated (collection or delivery)
       const bookingDateStr = collectionDateStr || deliveryDateStr;
       
-      console.log(`  Collection: "${collectionDateStr}", Delivery: "${deliveryDateStr}", Method: "${deliveryMethod}", Return: "${returnDateStr}"`);
+      console.log(`  Collection: "${collectionDateStr}", Delivery: "${deliveryDateStr}", Return: "${returnDateStr}"`);
       
       if (!bookingDateStr || !returnDateStr) {
         console.log(`  → Skipping - missing booking or return date`);
@@ -305,15 +298,35 @@ async function isDateAvailable(partyDateStr) {
       }
     }
     
-    // Date is available if at least one kit is free
-    const available = !(pastelBooked && brightBooked);
     console.log(`\n=== FINAL RESULT ===`);
-    console.log(`PastelBooked=${pastelBooked}, BrightBooked=${brightBooked}, Available=${available}`);
+    console.log(`PastelBooked=${pastelBooked}, BrightBooked=${brightBooked}`);
     console.log(`=== AVAILABILITY CHECK END ===\n`);
-    return available;
+    
+    // Return detailed availability for each colour
+    return {
+      pastelAvailable: !pastelBooked,
+      brightAvailable: !brightBooked,
+      message: generateAvailabilityMessage(pastelBooked, brightBooked)
+    };
   } catch (error) {
     console.error('Error checking availability:', error);
-    return true; // Default to available on error
+    return {
+      pastelAvailable: true,
+      brightAvailable: true,
+      message: ''
+    };
+  }
+}
+
+function generateAvailabilityMessage(pastelBooked, brightBooked) {
+  if (!pastelBooked && !brightBooked) {
+    return 'Both kits available for this date';
+  } else if (!pastelBooked) {
+    return 'Only Pastel kit is available for this date';
+  } else if (!brightBooked) {
+    return 'Only Bright kit is available for this date';
+  } else {
+    return 'This date is fully booked';
   }
 }
 
@@ -326,10 +339,12 @@ app.get('/api/availability', async (req, res) => {
   }
   
   try {
-    const available = await isDateAvailable(partyDate);
+    const availability = await isDateAvailable(partyDate);
     res.json({
       partyDate: partyDate,
-      available: available,
+      pastelAvailable: availability.pastelAvailable,
+      brightAvailable: availability.brightAvailable,
+      message: availability.message,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
