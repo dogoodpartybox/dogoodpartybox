@@ -500,7 +500,22 @@ app.get('/api/debug', async (req, res) => {
 // Create payment intent for Stripe
 app.post('/api/create-payment-intent', async (req, res) => {
   try {
-    const { amount, currency = 'gbp', customerEmail, customerName } = req.body;
+    const {
+      amount,
+      currency = 'gbp',
+      customerEmail,
+      customerName,
+      partyDate,
+      guests,
+      postcode,
+      colour,
+      washing,
+      delivery,
+      collectionDate,
+      collectionTime,
+      deliveryDate,
+      deliveryTime
+    } = req.body;
 
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: 'Invalid amount' });
@@ -511,7 +526,17 @@ app.post('/api/create-payment-intent', async (req, res) => {
       currency,
       metadata: {
         customerEmail,
-        customerName
+        customerName,
+        partyDate,
+        guests,
+        postcode,
+        colour,
+        washing,
+        delivery,
+        collectionDate,
+        collectionTime,
+        deliveryDate,
+        deliveryTime
       }
     });
 
@@ -547,7 +572,21 @@ app.post('/api/stripe-webhook', async (req, res) => {
   // Handle payment success
   if (event.type === 'payment_intent.succeeded') {
     const paymentIntent = event.data.object;
-    const { customerEmail, customerName } = paymentIntent.metadata;
+    const metadata = paymentIntent.metadata;
+    const {
+      customerEmail,
+      customerName,
+      partyDate,
+      guests,
+      postcode,
+      colour,
+      washing,
+      delivery,
+      collectionDate,
+      collectionTime,
+      deliveryDate,
+      deliveryTime
+    } = metadata;
 
     try {
       // Add booking to Google Sheets
@@ -568,8 +607,32 @@ app.post('/api/stripe-webhook', async (req, res) => {
         throw new Error('Bookings sheet not found');
       }
 
-      // Calculate 3 business day return deadline
-      const returnDate = new Date();
+      // Determine kit selection based on colour preference
+      let kit1Booked = '';
+      let kit2Booked = '';
+      if (colour === 'pastel') {
+        kit1Booked = 'Pastel';
+      } else if (colour === 'bright') {
+        kit2Booked = 'Bright';
+      } else if (colour === 'no-preference') {
+        // For no preference, we'll auto-assign to Pastel as default
+        kit1Booked = 'Pastel (auto-assigned)';
+      }
+
+      // Determine collection/delivery details
+      const bookingCollectionDate = delivery === 'collect' ? collectionDate : '';
+      const bookingCollectionTime = delivery === 'collect' ? collectionTime : '';
+      const bookingDeliveryDate = delivery === 'we-deliver' ? deliveryDate : '';
+      const bookingDeliveryTime = delivery === 'we-deliver' ? deliveryTime : '';
+
+      // Calculate 3 business day return deadline from collection/delivery date
+      let returnDate = new Date();
+      if (bookingCollectionDate) {
+        returnDate = new Date(bookingCollectionDate);
+      } else if (bookingDeliveryDate) {
+        returnDate = new Date(bookingDeliveryDate);
+      }
+
       let businessDaysAdded = 0;
       while (businessDaysAdded < 3) {
         returnDate.setDate(returnDate.getDate() + 1);
@@ -580,23 +643,50 @@ app.post('/api/stripe-webhook', async (req, res) => {
       }
       const returnDateFormatted = returnDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '/');
 
-      // Add row to Bookings sheet
+      // Convert party date to DD/MM/YYYY format
+      const partyDateObj = new Date(partyDate);
+      const partyDateFormatted = partyDateObj.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '/');
+
+      // Format collection/delivery dates
+      const collectionDateFormatted = bookingCollectionDate ? new Date(bookingCollectionDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '/') : '';
+      const deliveryDateFormatted = bookingDeliveryDate ? new Date(bookingDeliveryDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '/') : '';
+
+      // Add row to Bookings sheet with all fields
       await bookingsSheet.addRows([{
         'Booking ID': `BK-${Date.now()}`,
+        'Kit 1 Booked': kit1Booked,
+        'Kit 2 Booked': kit2Booked,
         'Customer Name': customerName || 'Not provided',
         'Customer Email': customerEmail,
+        'Party Date': partyDateFormatted,
+        'Collection Date': collectionDateFormatted || (delivery === 'we-deliver' ? deliveryDateFormatted : ''),
+        'Collection Time': bookingCollectionTime,
+        'Expected Return Date': returnDateFormatted,
+        'Washing Service': washing === 'we-wash' ? 'Yes' : 'No',
+        'Delivery Method': delivery === 'collect' ? 'Collection' : 'Delivery',
         'Status': 'Confirmed',
-        'Payment receipt sent': 'Yes',
-        'Expected Return Date': returnDateFormatted
+        'Payment receipt sent': 'Yes'
       }]);
 
-      // Send payment receipt email
+      console.log(`Booking added to sheet for ${customerName}: ${partyDateFormatted}`);
+
+      // Send payment receipt email (detailed version based on delivery method)
+      let receiptText, receiptHtml;
+
+      if (delivery === 'collect') {
+        receiptText = `Hi ${customerName},\n\nGreat! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.\n\nYour booking is confirmed for ${partyDateFormatted}.\n\nCollection details:\nDate: ${collectionDateFormatted}\nTime window: ${bookingCollectionTime}\nLocation: 32 East Street, Colchester, CO1 2TP\n\nLook for the black gate with the yellow number 32. The door is at the end of the path.\n\nPlease return the kit to our back door within 3 business days.\n\nThanks for supporting a better way to party.\n\nDo better, Do Good.\n\nCheers,\nCaro & Henry\nThe DGPB Team`;
+        receiptHtml = `<p>Hi ${customerName},</p><p>Great! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.</p><p>Your booking is confirmed for <strong>${partyDateFormatted}</strong>.</p><h3>Collection details</h3><p><strong>Date:</strong> ${collectionDateFormatted}<br><strong>Time window:</strong> ${bookingCollectionTime}<br><strong>Location:</strong> 32 East Street, Colchester, CO1 2TP</p><p>Look for the black gate with the yellow number 32. The door is at the end of the path.</p><p>Please return the kit to our back door within 3 business days.</p><p>Thanks for supporting a better way to party.</p><p>Do better, Do Good.</p><p>Cheers,<br>Caro & Henry<br>The DGPB Team</p>`;
+      } else {
+        receiptText = `Hi ${customerName},\n\nGreat! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.\n\nYour booking is confirmed for ${partyDateFormatted}.\n\nDelivery details:\nPreferred date: ${deliveryDateFormatted}\nPreferred window: ${bookingDeliveryTime}\n\nWe'll contact you to confirm the exact time within your preferred window.\n\nPlease return the kit to our back door within 3 business days and we'll collect it.\n\nThanks for supporting a better way to party.\n\nDo better, Do Good.\n\nCheers,\nCaro & Henry\nThe DGPB Team`;
+        receiptHtml = `<p>Hi ${customerName},</p><p>Great! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.</p><p>Your booking is confirmed for <strong>${partyDateFormatted}</strong>.</p><h3>Delivery details</h3><p><strong>Preferred date:</strong> ${deliveryDateFormatted}<br><strong>Preferred window:</strong> ${bookingDeliveryTime}</p><p>We'll contact you to confirm the exact time within your preferred window.</p><p>Please return the kit to our back door within 3 business days and we'll collect it.</p><p>Thanks for supporting a better way to party.</p><p>Do better, Do Good.</p><p>Cheers,<br>Caro & Henry<br>The DGPB Team</p>`;
+      }
+
       const mailOptions = {
         from: process.env.ZOHO_EMAIL,
         to: customerEmail,
         subject: 'Your Do Good Party Box booking is confirmed – payment received',
-        text: `Hi ${customerName},\n\nGreat! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.\n\nYour booking is confirmed. You'll receive further details shortly.\n\nThanks for supporting a better way to party.\n\nDo better, Do Good.\n\nCheers,\nCaro & Henry\nThe DGPB Team`,
-        html: `<p>Hi ${customerName},</p><p>Great! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.</p><p>Your booking is confirmed. You'll receive further details shortly.</p><p>Thanks for supporting a better way to party.</p><p>Do better, Do Good.</p><p>Cheers,<br>Caro & Henry<br>The DGPB Team</p>`
+        text: receiptText,
+        html: receiptHtml
       };
 
       await transporter.sendMail(mailOptions);
