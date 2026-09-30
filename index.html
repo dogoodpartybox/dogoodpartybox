@@ -723,6 +723,10 @@
           </div>
         </div>
         <div class="form-row">
+          <label>Full name <span class="required">*</span></label>
+          <input type="text" id="fullname" placeholder="e.g. Jane Smith">
+        </div>
+        <div class="form-row">
           <label>Contact email</label>
           <input type="email" id="email" placeholder="you@example.com">
         </div>
@@ -756,6 +760,19 @@
             <option value="evening">Evening (5pm-8pm)</option>
           </select>
         </div>
+        <div class="form-row" id="delivery-date-row" style="display:none;">
+          <label>Preferred delivery date <span class="required">*</span></label>
+          <input type="date" id="delivery-date">
+        </div>
+        <div class="form-row" id="delivery-time-row" style="display:none;">
+          <label>Preferred delivery window <span class="required">*</span></label>
+          <select id="delivery-time">
+            <option value="">Select a time</option>
+            <option value="morning">Morning (8am-12pm)</option>
+            <option value="afternoon">Afternoon (12pm-5pm)</option>
+            <option value="evening">Evening (5pm-8pm)</option>
+          </select>
+        </div>
         <div class="form-row">
           <label>Kit colour preference</label>
           <select id="colour">
@@ -765,7 +782,15 @@
             <option value="no-preference">No preference</option>
           </select>
         </div>
-        <button class="btn-primary" type="button">Confirm booking</button>
+        <div id="payment-section" style="display:none; margin-top: 30px; padding-top: 30px; border-top: 1px solid rgba(0,0,0,0.1);">
+          <h3 style="color: var(--dark); margin-bottom: 20px;">Payment details</h3>
+          <div class="form-row">
+            <label>Card details</label>
+            <div id="card-element" style="border: 1px solid #ddd; border-radius: 6px; padding: 12px; background: white; min-height: 40px;"></div>
+          </div>
+          <div id="card-error" role="alert" class="form-message error" style="display: none; margin-top: 10px;"></div>
+        </div>
+        <button class="btn-primary" type="button" id="book-button">Confirm booking</button>
         <p class="secure-note">Secure payment taken at checkout</p>
       </div>
     </div>
@@ -1190,7 +1215,142 @@
     }
   });
 
+  // ===== STRIPE PAYMENT INTEGRATION =====
+  
+  // Initialize Stripe
+  const stripe = Stripe('pk_test_51ULLOgPmwMRCqbIYSW5d4ftxGEtlAxBumNl8ZOA1Pc0NUSCPOF8rHuZu4fNVN81K4Nui9OTXYn0HX9qSBV720EEW00EJHPEN1T');
+  const elements = stripe.elements();
+  const cardElement = elements.create('card');
+
+  // Show/hide delivery fields when delivery method changes
+  document.getElementById('delivery').addEventListener('change', (e) => {
+    const deliveryDateRow = document.getElementById('delivery-date-row');
+    const deliveryTimeRow = document.getElementById('delivery-time-row');
+    const collectionDateRow = document.getElementById('collection-date-row');
+    const collectionTimeRow = document.getElementById('collection-time-row');
+
+    if (e.target.value === 'we-deliver') {
+      deliveryDateRow.style.display = 'block';
+      deliveryTimeRow.style.display = 'block';
+      collectionDateRow.style.display = 'none';
+      collectionTimeRow.style.display = 'none';
+    } else if (e.target.value === 'collect') {
+      deliveryDateRow.style.display = 'none';
+      deliveryTimeRow.style.display = 'none';
+      collectionDateRow.style.display = 'block';
+      collectionTimeRow.style.display = 'block';
+    } else {
+      deliveryDateRow.style.display = 'none';
+      deliveryTimeRow.style.display = 'none';
+      collectionDateRow.style.display = 'none';
+      collectionTimeRow.style.display = 'none';
+    }
+  });
+
+  // Handle booking button click
+  document.getElementById('book-button').addEventListener('click', async () => {
+    const fullname = document.getElementById('fullname').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const postcode = document.getElementById('postcode').value.trim();
+    const guests = document.getElementById('guests').value;
+    const partyDate = document.getElementById('party-date').value;
+    const delivery = document.getElementById('delivery').value;
+    const washing = document.getElementById('washing').value;
+    const colour = document.getElementById('colour').value;
+
+    // Validation
+    if (!fullname || !email || !postcode || !guests || !partyDate || !delivery || !washing) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    if (delivery === 'collect' && !document.getElementById('collection-date').value) {
+      alert('Please select a collection date');
+      return;
+    }
+
+    if (delivery === 'we-deliver' && !document.getElementById('delivery-date').value) {
+      alert('Please select a delivery date');
+      return;
+    }
+
+    // Mount card element if not already mounted
+    const cardContainer = document.getElementById('card-element');
+    if (cardContainer.children.length === 0) {
+      cardElement.mount('#card-element');
+    }
+
+    // Show payment section
+    document.getElementById('payment-section').style.display = 'block';
+
+    // Prevent double-click
+    const btn = document.getElementById('book-button');
+    btn.disabled = true;
+    btn.textContent = 'Processing payment...';
+
+    try {
+      // Calculate total amount (£25 + optional £5 washing)
+      let amount = 25;
+      if (washing === 'we-wash') amount += 5;
+
+      // Create payment intent on backend
+      const intentResponse = await fetch(`${BACKEND_URL}/api/create-payment-intent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: amount,
+          currency: 'gbp',
+          customerEmail: email,
+          customerName: fullname
+        })
+      });
+
+      const intentData = await intentResponse.json();
+      if (!intentData.clientSecret) {
+        throw new Error('Failed to create payment intent');
+      }
+
+      // Confirm payment with Stripe
+      const { paymentIntent, error } = await stripe.confirmCardPayment(intentData.clientSecret, {
+        payment_method: {
+          card: cardElement,
+          billing_details: { name: fullname, email: email }
+        }
+      });
+
+      if (error) {
+        document.getElementById('card-error').textContent = error.message;
+        document.getElementById('card-error').style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Confirm booking';
+      } else if (paymentIntent.status === 'succeeded') {
+        alert('Payment successful! You will receive a confirmation email shortly.');
+        // Reset form
+        document.getElementById('party-date').value = '';
+        document.getElementById('guests').value = '';
+        document.getElementById('fullname').value = '';
+        document.getElementById('email').value = '';
+        document.getElementById('postcode').value = '';
+        document.getElementById('delivery').value = '';
+        document.getElementById('washing').value = '';
+        document.getElementById('colour').value = '';
+        cardElement.clear();
+        document.getElementById('payment-section').style.display = 'none';
+        btn.disabled = false;
+        btn.textContent = 'Confirm booking';
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      document.getElementById('card-error').textContent = 'Payment processing error: ' + error.message;
+      document.getElementById('card-error').style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Confirm booking';
+    }
+  });
+
 </script>
+
+<script src="https://js.stripe.com/v3/"></script>
 
 </body>
 </html>
