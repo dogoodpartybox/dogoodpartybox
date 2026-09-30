@@ -225,16 +225,16 @@ async function isDateAvailable(partyDateStr) {
     const rows = await getSheetData();
     console.log(`Retrieved ${rows.length} rows from sheet`);
     
-    let kit1Booked = false;
-    let kit2Booked = false;
+    let pastelBooked = false;
+    let brightBooked = false;
     
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const rawData = row._rawData;
       
       // Column indices from raw data:
-      // 1: Kit 1 Booked
-      // 2: Kit 2 Booked
+      // 1: Pastel Booked (formerly Kit 1 Booked)
+      // 2: Bright Booked (formerly Kit 2 Booked)
       // 6: Collection Date
       // 8: Expected Return Date
       // 11: Status
@@ -265,28 +265,32 @@ async function isDateAvailable(partyDateStr) {
         continue;
       }
       
-      // Check if party date falls within blocked range
+      // Check if party date falls within blocked range (inclusive)
       const isInRange = partyDate >= collectionDate && partyDate <= returnDate;
       console.log(`  Party date in range? ${isInRange}`);
       
       if (isInRange) {
-        const kit1 = rawData[1];
-        const kit2 = rawData[2];
-        console.log(`    Kit 1 Booked: "${kit1}", Kit 2 Booked: "${kit2}"`);
+        const pastel = rawData[1];
+        const bright = rawData[2];
+        console.log(`    Pastel Booked: "${pastel}", Bright Booked: "${bright}"`);
         
-        if (kit1 && kit1.toLowerCase().includes('kit 1')) {
-          kit1Booked = true;
-          console.log(`    Kit 1 marked as booked`);
+        // Check if Pastel kit is booked (non-empty value)
+        if (pastel && pastel.trim()) {
+          pastelBooked = true;
+          console.log(`    Pastel kit marked as booked`);
         }
-        if (kit2 && kit2.toLowerCase().includes('kit 2')) {
-          kit2Booked = true;
-          console.log(`    Kit 2 marked as booked`);
+        
+        // Check if Bright kit is booked (non-empty value)
+        if (bright && bright.trim()) {
+          brightBooked = true;
+          console.log(`    Bright kit marked as booked`);
         }
       }
     }
     
-    const available = !(kit1Booked && kit2Booked);
-    console.log(`Final result: Kit1Booked=${kit1Booked}, Kit2Booked=${kit2Booked}, Available=${available}`);
+    // Date is available if at least one kit is free
+    const available = !(pastelBooked && brightBooked);
+    console.log(`Final result: PastelBooked=${pastelBooked}, BrightBooked=${brightBooked}, Available=${available}`);
     return available;
   } catch (error) {
     console.error('Error checking availability:', error);
@@ -608,15 +612,15 @@ app.post('/api/stripe-webhook', async (req, res) => {
       }
 
       // Determine kit selection based on colour preference
-      let kit1Booked = '';
-      let kit2Booked = '';
+      let pastelBooked = '';
+      let brightBooked = '';
       if (colour === 'pastel') {
-        kit1Booked = 'Pastel';
+        pastelBooked = 'Pastel';
       } else if (colour === 'bright') {
-        kit2Booked = 'Bright';
+        brightBooked = 'Bright';
       } else if (colour === 'no-preference') {
-        // For no preference, we'll auto-assign to Pastel as default
-        kit1Booked = 'Pastel (auto-assigned)';
+        // For no preference, default to Pastel if available, otherwise Bright
+        pastelBooked = 'Pastel (auto-assigned)';
       }
 
       // Determine collection/delivery details
@@ -654,8 +658,8 @@ app.post('/api/stripe-webhook', async (req, res) => {
       // Add row to Bookings sheet with all fields
       await bookingsSheet.addRows([{
         'Booking ID': `BK-${Date.now()}`,
-        'Kit 1 Booked': kit1Booked,
-        'Kit 2 Booked': kit2Booked,
+        'Pastel Booked': pastelBooked,
+        'Bright Booked': brightBooked,
         'Customer Name': customerName || 'Not provided',
         'Customer Email': customerEmail,
         'Party Date': partyDateFormatted,
