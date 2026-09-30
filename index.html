@@ -902,26 +902,27 @@
         deliverOption.disabled = true;
       }
     } else {
-      message.textContent = '';
-      message.className = 'form-message';
-
       let cost = 'Free';
+      let costDisplay = '£0';
 
       if (distance > 5) {
         cost = '£10';
+        costDisplay = '£10';
       } else if (distance > 2) {
         cost = '£5';
+        costDisplay = '£5';
       }
+
+      // Show distance and delivery cost so user can see it before choosing delivery
+      const distanceDisplay = distance.toFixed(1);
+      message.textContent = `${distanceDisplay} miles away - Delivery: ${costDisplay}`;
+      message.className = 'form-message success';
 
       // Enable "We deliver" option
       const deliverOption = deliverySelect.querySelector('option[value="we-deliver"]');
       if (deliverOption) {
         deliverOption.disabled = false;
       }
-
-      // Don't show delivery cost message during booking flow
-      message.textContent = '';
-      message.className = '';
     }
   }
 
