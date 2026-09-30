@@ -232,14 +232,16 @@ async function isDateAvailable(partyDateStr) {
       const row = rows[i];
       const rawData = row._rawData;
       
-      // Column indices from raw data:
-      // 1: Pastel Booked (formerly Kit 1 Booked)
-      // 2: Bright Booked (formerly Kit 2 Booked)
-      // 6: Collection Date
-      // 8: Expected Return Date
-      // 11: Status
+      // Column indices from raw data (0-indexed):
+      // 1: Pastel Booked
+      // 2: Bright Booked
+      // 6: Collection Date (for collections)
+      // 8: Delivery Date (for deliveries)
+      // 10: Expected Return Date
+      // 12: Delivery Method
+      // 13: Status
       
-      const status = rawData[11];
+      const status = rawData[13];
       console.log(`Row ${i}: Status="${status}"`);
       
       if (status !== 'Confirmed') {
@@ -247,26 +249,33 @@ async function isDateAvailable(partyDateStr) {
         continue;
       }
       
+      // Get both collection and delivery dates
       const collectionDateStr = rawData[6];
-      const returnDateStr = rawData[8];
-      console.log(`  Collection Date: "${collectionDateStr}", Return Date: "${returnDateStr}"`);
+      const deliveryDateStr = rawData[8];
+      const returnDateStr = rawData[10];
+      const deliveryMethod = rawData[12];
       
-      if (!collectionDateStr || !returnDateStr) {
+      // For availability purposes, use whichever date is populated (collection or delivery)
+      const bookingDateStr = collectionDateStr || deliveryDateStr;
+      
+      console.log(`  Collection Date: "${collectionDateStr}", Delivery Date: "${deliveryDateStr}", Delivery Method: "${deliveryMethod}", Return Date: "${returnDateStr}"`);
+      
+      if (!bookingDateStr || !returnDateStr) {
         console.log(`  Skipping - missing date fields`);
         continue;
       }
       
-      const collectionDate = parseGoogleSheetDate(collectionDateStr);
+      const bookingDate = parseGoogleSheetDate(bookingDateStr);
       const returnDate = parseGoogleSheetDate(returnDateStr);
-      console.log(`  Parsed dates: collection=${collectionDate?.toISOString()}, return=${returnDate?.toISOString()}`);
+      console.log(`  Parsed dates: booking=${bookingDate?.toISOString()}, return=${returnDate?.toISOString()}`);
       
-      if (!collectionDate || !returnDate) {
+      if (!bookingDate || !returnDate) {
         console.log(`  Skipping - failed to parse dates`);
         continue;
       }
       
       // Check if party date falls within blocked range (inclusive)
-      const isInRange = partyDate >= collectionDate && partyDate <= returnDate;
+      const isInRange = partyDate >= bookingDate && partyDate <= returnDate;
       console.log(`  Party date in range? ${isInRange}`);
       
       if (isInRange) {
