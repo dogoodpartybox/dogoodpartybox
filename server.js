@@ -16,7 +16,16 @@ app.use(cors({
   allowedHeaders: ['Content-Type']
 }));
 
-app.use(express.json());
+// Middleware to capture raw body for Stripe webhook verification
+app.use((req, res, next) => {
+  if (req.path === '/api/stripe-webhook') {
+    // For webhook endpoint, use raw body
+    express.raw({ type: 'application/json' })(req, res, next);
+  } else {
+    // For all other endpoints, parse as JSON
+    express.json()(req, res, next);
+  }
+});
 
 // Business location
 const BUSINESS_LAT = 51.89025987316835;
@@ -517,7 +526,7 @@ app.post('/api/create-payment-intent', async (req, res) => {
 });
 
 // Stripe webhook handler
-app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+app.post('/api/stripe-webhook', async (req, res) => {
   const sig = req.headers['stripe-signature'];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
