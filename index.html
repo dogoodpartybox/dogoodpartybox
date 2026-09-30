@@ -919,8 +919,9 @@
         deliverOption.disabled = false;
       }
 
-      message.textContent = `Delivery cost: ${cost} (${distance.toFixed(1)} miles away)`;
-      message.className = 'form-message info';
+      // Don't show delivery cost message during booking flow
+      message.textContent = '';
+      message.className = '';
     }
   }
 
@@ -974,26 +975,7 @@
     }
   });
 
-  // Form submission validation
-  document.querySelector('.form-wrapper button').addEventListener('click', () => {
-    const delivery = document.getElementById('delivery').value;
-    const collectionDate = document.getElementById('collection-date');
-    const collectionTime = document.getElementById('collection-time');
 
-    if (delivery === 'collect') {
-      if (!collectionDate.value) {
-        alert('Please select a collection date.');
-        return;
-      }
-      if (!collectionTime.value) {
-        alert('Please select a collection time window.');
-        return;
-      }
-    }
-
-    // If validation passes, proceed to payment (to be implemented)
-    alert('Booking confirmed! Proceeding to payment...');
-  });
 
   // Inventory availability checker
   const BACKEND_URL = "https://do-good-party-box-api.fly.dev";
@@ -1317,6 +1299,10 @@
     // Show payment section
     document.getElementById('payment-section').style.display = 'block';
 
+    // Clear any previous error messages
+    document.getElementById('card-error').style.display = 'none';
+    document.getElementById('card-error').textContent = '';
+
     // Prevent double-click
     const btn = document.getElementById('book-button');
     btn.disabled = true;
@@ -1327,7 +1313,13 @@
       let amount = 25;
       if (washing === 'we-wash') amount += 5;
 
-      // Create payment intent on backend
+      // Get delivery/collection details
+      const collectionDate = document.getElementById('collection-date').value;
+      const collectionTime = document.getElementById('collection-time').value;
+      const deliveryDate = document.getElementById('delivery-date').value;
+      const deliveryTime = document.getElementById('delivery-time').value;
+
+      // Create payment intent on backend with all booking data
       const intentResponse = await fetch(`${BACKEND_URL}/api/create-payment-intent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1335,7 +1327,17 @@
           amount: amount,
           currency: 'gbp',
           customerEmail: email,
-          customerName: fullname
+          customerName: fullname,
+          partyDate: partyDate,
+          guests: guests,
+          postcode: postcode,
+          colour: colour,
+          washing: washing,
+          delivery: delivery,
+          collectionDate: collectionDate,
+          collectionTime: collectionTime,
+          deliveryDate: deliveryDate,
+          deliveryTime: deliveryTime
         })
       });
 
@@ -1358,28 +1360,28 @@
         btn.disabled = false;
         btn.textContent = 'Confirm booking';
       } else if (paymentIntent.status === 'succeeded') {
-        document.getElementById('card-error').textContent = 'Payment successful! You will receive a confirmation email shortly.';
-        document.getElementById('card-error').className = '';
-        document.getElementById('card-error').style.display = 'block';
-        document.getElementById('card-error').style.color = '#2F8B6E';
+        // Payment successful - silently reset form and clear payment section
+        document.getElementById('party-date').value = '';
+        document.getElementById('guests').value = '';
+        document.getElementById('fullname').value = '';
+        document.getElementById('email').value = '';
+        document.getElementById('postcode').value = '';
+        document.getElementById('delivery').value = '';
+        document.getElementById('washing').value = '';
+        document.getElementById('colour').value = '';
+        document.getElementById('collection-date').value = '';
+        document.getElementById('collection-time').value = '';
+        document.getElementById('delivery-date').value = '';
+        document.getElementById('delivery-time').value = '';
+        cardElement.clear();
+        document.getElementById('payment-section').style.display = 'none';
+        document.getElementById('card-error').style.display = 'none';
+        document.getElementById('card-error').textContent = '';
+        btn.disabled = false;
+        btn.textContent = 'Confirm booking';
         
-        // Reset form after 2 seconds
-        setTimeout(() => {
-          document.getElementById('party-date').value = '';
-          document.getElementById('guests').value = '';
-          document.getElementById('fullname').value = '';
-          document.getElementById('email').value = '';
-          document.getElementById('postcode').value = '';
-          document.getElementById('delivery').value = '';
-          document.getElementById('washing').value = '';
-          document.getElementById('colour').value = '';
-          cardElement.clear();
-          document.getElementById('payment-section').style.display = 'none';
-          document.getElementById('card-error').style.display = 'none';
-          document.getElementById('card-error').style.color = '';
-          btn.disabled = false;
-          btn.textContent = 'Confirm booking';
-        }, 2000);
+        // Scroll to top quietly
+        window.scrollTo(0, 0);
       }
     } catch (error) {
       console.error('Payment error:', error);
