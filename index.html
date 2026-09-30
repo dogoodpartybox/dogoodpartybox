@@ -935,25 +935,42 @@
       return;
     }
 
+    console.log('Postcode input detected:', postcode);
+
     // Debounce: wait 500ms after user stops typing before making API request
     postcodeTimeout = setTimeout(async () => {
+      console.log('Debounce timeout fired, making fetch for:', postcode);
+      
       try {
         const response = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(postcode)}`);
+        console.log('Postcode API response status:', response.status);
+        
+        // Handle 304 (cached) as if it were an error - we need the actual data
+        if (response.status === 304) {
+          console.log('Got 304 cached response, treating as error');
+          document.getElementById('delivery-message').textContent = 'Postcode lookup failed. Please try again.';
+          document.getElementById('delivery-message').className = 'form-message error';
+          return;
+        }
         
         if (!response.ok) {
+          console.log('Response not OK, status:', response.status);
           document.getElementById('delivery-message').textContent = 'Postcode not found. Please check and try again.';
           document.getElementById('delivery-message').className = 'form-message error';
           return;
         }
         
         const data = await response.json();
+        console.log('Parsed postcode data:', data);
 
         if (data.status === 200) {
           const userLat = data.result.latitude;
           const userLng = data.result.longitude;
           const distance = haversineDistance(BUSINESS_LAT, BUSINESS_LNG, userLat, userLng);
+          console.log('Distance calculated:', distance);
           updateDeliveryCost(distance);
         } else {
+          console.log('API returned non-200 status:', data.status);
           document.getElementById('delivery-message').textContent = 'Postcode not found. Please check and try again.';
           document.getElementById('delivery-message').className = 'form-message error';
         }
