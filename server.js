@@ -213,6 +213,7 @@ async function isDateAvailable(partyDateStr) {
   today.setHours(0, 0, 0, 0);
   partyDate.setHours(0, 0, 0, 0);
   
+  console.log(`=== AVAILABILITY CHECK START ===`);
   console.log(`Checking availability for party date: ${partyDate.toISOString()}`);
   
   // Block same-day bookings
@@ -232,20 +233,26 @@ async function isDateAvailable(partyDateStr) {
       const row = rows[i];
       const rawData = row._rawData;
       
-      // Column indices from raw data (0-indexed):
-      // 1: Pastel Booked
-      // 2: Bright Booked
-      // 6: Collection Date (for collections)
-      // 8: Delivery Date (for deliveries)
-      // 10: Expected Return Date
-      // 12: Delivery Method
-      // 13: Status
+      console.log(`\n--- ROW ${i} ---`);
+      console.log(`Raw data length: ${rawData.length}`);
+      console.log(`Booking ID[0]: "${rawData[0]}"`);
+      console.log(`Pastel Booked[1]: "${rawData[1]}"`);
+      console.log(`Bright Booked[2]: "${rawData[2]}"`);
+      console.log(`Customer Name[3]: "${rawData[3]}"`);
+      console.log(`Customer Email[4]: "${rawData[4]}"`);
+      console.log(`Party Date[5]: "${rawData[5]}"`);
+      console.log(`Collection Date[6]: "${rawData[6]}"`);
+      console.log(`Collection Time[7]: "${rawData[7]}"`);
+      console.log(`Delivery Date[8]: "${rawData[8]}"`);
+      console.log(`Delivery Time[9]: "${rawData[9]}"`);
+      console.log(`Expected Return Date[10]: "${rawData[10]}"`);
+      console.log(`Washing Service[11]: "${rawData[11]}"`);
+      console.log(`Delivery Method[12]: "${rawData[12]}"`);
+      console.log(`Status[13]: "${rawData[13]}"`);
       
       const status = rawData[13];
-      console.log(`Row ${i}: Status="${status}"`);
-      
       if (status !== 'Confirmed') {
-        console.log(`  Skipping - status is not Confirmed`);
+        console.log(`  → Skipping - status is "${status}" (not Confirmed)`);
         continue;
       }
       
@@ -258,48 +265,51 @@ async function isDateAvailable(partyDateStr) {
       // For availability purposes, use whichever date is populated (collection or delivery)
       const bookingDateStr = collectionDateStr || deliveryDateStr;
       
-      console.log(`  Collection Date: "${collectionDateStr}", Delivery Date: "${deliveryDateStr}", Delivery Method: "${deliveryMethod}", Return Date: "${returnDateStr}"`);
+      console.log(`  Collection: "${collectionDateStr}", Delivery: "${deliveryDateStr}", Method: "${deliveryMethod}", Return: "${returnDateStr}"`);
       
       if (!bookingDateStr || !returnDateStr) {
-        console.log(`  Skipping - missing date fields`);
+        console.log(`  → Skipping - missing booking or return date`);
         continue;
       }
       
       const bookingDate = parseGoogleSheetDate(bookingDateStr);
       const returnDate = parseGoogleSheetDate(returnDateStr);
-      console.log(`  Parsed dates: booking=${bookingDate?.toISOString()}, return=${returnDate?.toISOString()}`);
+      console.log(`  Parsed booking: ${bookingDate?.toISOString()}, return: ${returnDate?.toISOString()}`);
       
       if (!bookingDate || !returnDate) {
-        console.log(`  Skipping - failed to parse dates`);
+        console.log(`  → Skipping - date parsing failed`);
         continue;
       }
       
       // Check if party date falls within blocked range (inclusive)
       const isInRange = partyDate >= bookingDate && partyDate <= returnDate;
-      console.log(`  Party date in range? ${isInRange}`);
+      console.log(`  Party date (${partyDate.toISOString()}) in range [${bookingDate.toISOString()} to ${returnDate.toISOString()}]? ${isInRange}`);
       
       if (isInRange) {
         const pastel = rawData[1];
         const bright = rawData[2];
-        console.log(`    Pastel Booked: "${pastel}", Bright Booked: "${bright}"`);
+        console.log(`    → Date IS BLOCKED`);
+        console.log(`    Pastel value: "${pastel}", Bright value: "${bright}"`);
         
         // Check if Pastel kit is booked (non-empty value)
         if (pastel && pastel.trim()) {
           pastelBooked = true;
-          console.log(`    Pastel kit marked as booked`);
+          console.log(`    → Pastel kit marked as booked`);
         }
         
         // Check if Bright kit is booked (non-empty value)
         if (bright && bright.trim()) {
           brightBooked = true;
-          console.log(`    Bright kit marked as booked`);
+          console.log(`    → Bright kit marked as booked`);
         }
       }
     }
     
     // Date is available if at least one kit is free
     const available = !(pastelBooked && brightBooked);
-    console.log(`Final result: PastelBooked=${pastelBooked}, BrightBooked=${brightBooked}, Available=${available}`);
+    console.log(`\n=== FINAL RESULT ===`);
+    console.log(`PastelBooked=${pastelBooked}, BrightBooked=${brightBooked}, Available=${available}`);
+    console.log(`=== AVAILABILITY CHECK END ===\n`);
     return available;
   } catch (error) {
     console.error('Error checking availability:', error);
