@@ -573,6 +573,16 @@ app.post('/api/stripe-webhook', async (req, res) => {
     return res.status(400).json({ error: `Webhook Error: ${error.message}` });
   }
 
+  // Helper function to convert time window codes to readable format
+  function getTimeWindowDisplay(windowCode) {
+    const windowMap = {
+      'morning': 'Morning (8am–12pm)',
+      'afternoon': 'Afternoon (12pm–5pm)',
+      'evening': 'Evening (5pm–8pm)'
+    };
+    return windowMap[windowCode] || windowCode;
+  }
+
   // Handle payment success
   if (event.type === 'payment_intent.succeeded') {
     const paymentIntent = event.data.object;
@@ -678,11 +688,13 @@ app.post('/api/stripe-webhook', async (req, res) => {
       let receiptText, receiptHtml;
 
       if (delivery === 'collect') {
-        receiptText = `Hi ${customerName},\n\nGreat! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.\n\nYour booking is confirmed for ${partyDateFormatted}.\n\nCollection details:\nDate: ${collectionDateFormatted}\nTime window: ${bookingCollectionTime}\nLocation: 32 East Street, Colchester, CO1 2TP\n\nLook for the black gate with the yellow number 32. The door is at the end of the path.\n\nPlease return the kit to our back door within 3 business days.\n\nThanks for supporting a better way to party.\n\nDo better, Do Good.\n\nCheers,\nCaro & Henry\nThe DGPB Team`;
-        receiptHtml = `<p>Hi ${customerName},</p><p>Great! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.</p><p>Your booking is confirmed for <strong>${partyDateFormatted}</strong>.</p><h3>Collection details</h3><p><strong>Date:</strong> ${collectionDateFormatted}<br><strong>Time window:</strong> ${bookingCollectionTime}<br><strong>Location:</strong> 32 East Street, Colchester, CO1 2TP</p><p>Look for the black gate with the yellow number 32. The door is at the end of the path.</p><p>Please return the kit to our back door within 3 business days.</p><p>Thanks for supporting a better way to party.</p><p>Do better, Do Good.</p><p>Cheers,<br>Caro & Henry<br>The DGPB Team</p>`;
+        const collectionTimeDisplay = getTimeWindowDisplay(bookingCollectionTime);
+        receiptText = `Hi ${customerName},\n\nGreat! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.\n\nYour booking is confirmed for ${partyDateFormatted}.\n\nCollection details:\nDate: ${collectionDateFormatted}\nTime window: ${collectionTimeDisplay}\nLocation: 32 East Street, Colchester, CO1 2TP\n\nLook for the black gate with the yellow number 32. The door is at the end of the path.\n\nPlease return the kit to our back door within 3 business days.\n\nThanks for supporting a better way to party.\n\nDo better, Do Good.\n\nCheers,\nCaro & Henry\nThe DGPB Team`;
+        receiptHtml = `<p>Hi ${customerName},</p><p>Great! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.</p><p>Your booking is confirmed for <strong>${partyDateFormatted}</strong>.</p><h3>Collection details</h3><p><strong>Date:</strong> ${collectionDateFormatted}<br><strong>Time window:</strong> ${collectionTimeDisplay}<br><strong>Location:</strong> 32 East Street, Colchester, CO1 2TP</p><p>Look for the black gate with the yellow number 32. The door is at the end of the path.</p><p>Please return the kit to our back door within 3 business days.</p><p>Thanks for supporting a better way to party.</p><p>Do better, Do Good.</p><p>Cheers,<br>Caro & Henry<br>The DGPB Team</p>`;
       } else {
-        receiptText = `Hi ${customerName},\n\nGreat! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.\n\nYour booking is confirmed for ${partyDateFormatted}.\n\nDelivery details:\nPreferred date: ${deliveryDateFormatted}\nPreferred window: ${bookingDeliveryTime}\n\nWe'll contact you to confirm the exact time within your preferred window.\n\nPlease return the kit to our back door within 3 business days and we'll collect it.\n\nThanks for supporting a better way to party.\n\nDo better, Do Good.\n\nCheers,\nCaro & Henry\nThe DGPB Team`;
-        receiptHtml = `<p>Hi ${customerName},</p><p>Great! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.</p><p>Your booking is confirmed for <strong>${partyDateFormatted}</strong>.</p><h3>Delivery details</h3><p><strong>Preferred date:</strong> ${deliveryDateFormatted}<br><strong>Preferred window:</strong> ${bookingDeliveryTime}</p><p>We'll contact you to confirm the exact time within your preferred window.</p><p>Please return the kit to our back door within 3 business days and we'll collect it.</p><p>Thanks for supporting a better way to party.</p><p>Do better, Do Good.</p><p>Cheers,<br>Caro & Henry<br>The DGPB Team</p>`;
+        const deliveryTimeDisplay = getTimeWindowDisplay(bookingDeliveryTime);
+        receiptText = `Hi ${customerName},\n\nGreat! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.\n\nYour booking is confirmed for ${partyDateFormatted}.\n\nDelivery details:\nPreferred date: ${deliveryDateFormatted}\nPreferred window: ${deliveryTimeDisplay}\n\nWe'll contact you to confirm the exact time within your preferred window.\n\nPlease return the kit to our back door within 3 business days and we'll collect it.\n\nThanks for supporting a better way to party.\n\nDo better, Do Good.\n\nCheers,\nCaro & Henry\nThe DGPB Team`;
+        receiptHtml = `<p>Hi ${customerName},</p><p>Great! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.</p><p>Your booking is confirmed for <strong>${partyDateFormatted}</strong>.</p><h3>Delivery details</h3><p><strong>Preferred date:</strong> ${deliveryDateFormatted}<br><strong>Preferred window:</strong> ${deliveryTimeDisplay}</p><p>We'll contact you to confirm the exact time within your preferred window.</p><p>Please return the kit to our back door within 3 business days and we'll collect it.</p><p>Thanks for supporting a better way to party.</p><p>Do better, Do Good.</p><p>Cheers,<br>Caro & Henry<br>The DGPB Team</p>`;
       }
 
       const mailOptions = {
