@@ -174,52 +174,56 @@
   .cycle-title h2{font-size:2.2rem; margin-bottom:12px;}
   .cycle-title p{opacity:0.8; font-size:1.05rem; max-width:500px; margin:0 auto;}
   .cycle-grid{
-    display:grid;
-    grid-template-columns:repeat(5,1fr);
-    gap:30px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:40px;
     position:relative;
     padding:0 40px;
+    justify-content:center;
+    align-items:flex-start;
   }
   .cycle-item{
     text-align:center;
     position:relative;
+    flex:0 1 180px;
   }
-  .cycle-item:nth-child(7),
-  .cycle-item:nth-child(9){
-    grid-column:auto;
+  .cycle-item:nth-child(7){
+    flex-basis:100%;
+    display:flex;
+    justify-content:center;
+    flex-wrap:wrap;
   }
   .cycle-item:nth-child(9){
-    grid-column:2 / span 1;
+    margin-left:20px;
   }
   .cycle-icon{
-    width:80px;
-    height:80px;
+    width:100px;
+    height:100px;
     background:var(--light);
     border-radius:50%;
     margin:0 auto 24px;
     display:flex;
     align-items:center;
     justify-content:center;
-    font-size:2.5rem;
+    font-size:2.8rem;
   }
-  .cycle-item h3{font-size:1.1rem; margin-bottom:8px;}
+  .cycle-item h3{font-size:1.15rem; margin-bottom:8px; font-weight:600;}
   .cycle-item p{font-size:0.95rem; opacity:0.8; line-height:1.5;}
   .cycle-arrow{
     position:absolute;
-    top:35px;
-    width:30px;
+    top:45px;
+    width:40px;
     height:2px;
     background:var(--primary);
     opacity:0.3;
-    display:none;
   }
-  .cycle-arrow.a1{left:calc(20% - 15px); display:block;}
-  .cycle-arrow.a2{left:calc(40% - 15px); display:block;}
-  .cycle-arrow.a3{left:calc(60% - 15px); display:block;}
+  .cycle-arrow.a1{left:calc(100% + 20px);}
+  .cycle-arrow.a2{left:calc(100% + 20px);}
+  .cycle-arrow.a3{left:calc(100% + 20px);}
   .cycle-arrow::after{
     content:'→';
     position:absolute;
-    right:-10px;
+    right:-12px;
     top:-8px;
     color:var(--primary);
     font-size:1.2rem;
@@ -553,9 +557,24 @@
 
   @media (max-width: 900px){
     nav ul{display:none;}
-    .cycle-grid{grid-template-columns:1fr; gap:30px; padding:0 20px;}
-    .cycle-item:nth-child(9){grid-column:1;}
-    .cycle-arrow{display:none;}
+    .cycle-grid{
+      flex-direction:column;
+      align-items:center;
+      gap:24px;
+      padding:0 20px;
+    }
+    .cycle-item{
+      flex-basis:auto;
+      max-width:300px;
+    }
+    .cycle-item:nth-child(7){
+      flex-basis:auto;
+      margin-top:10px;
+    }
+    .cycle-item:nth-child(9){
+      margin-left:0;
+    }
+    .cycle-arrow{display:none!important;}
     .kit-header, .booking-container{grid-template-columns:1fr;}
     .pricing-cards, .options-grid{grid-template-columns:1fr;}
     .footer-content{grid-template-columns:1fr;}
