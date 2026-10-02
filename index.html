@@ -175,7 +175,7 @@
   .cycle-title p{opacity:0.8; font-size:1.05rem; max-width:500px; margin:0 auto;}
   .cycle-grid{
     display:grid;
-    grid-template-columns:repeat(4,1fr);
+    grid-template-columns:repeat(5,1fr);
     gap:30px;
     position:relative;
     padding:0 40px;
@@ -183,6 +183,13 @@
   .cycle-item{
     text-align:center;
     position:relative;
+  }
+  .cycle-item:nth-child(7),
+  .cycle-item:nth-child(9){
+    grid-column:auto;
+  }
+  .cycle-item:nth-child(9){
+    grid-column:2 / span 1;
   }
   .cycle-icon{
     width:80px;
@@ -204,10 +211,11 @@
     height:2px;
     background:var(--primary);
     opacity:0.3;
+    display:none;
   }
-  .cycle-arrow.a1{left:calc(25% - 15px);}
-  .cycle-arrow.a2{left:calc(50% - 15px);}
-  .cycle-arrow.a3{left:calc(75% - 15px);}
+  .cycle-arrow.a1{left:calc(20% - 15px); display:block;}
+  .cycle-arrow.a2{left:calc(40% - 15px); display:block;}
+  .cycle-arrow.a3{left:calc(60% - 15px); display:block;}
   .cycle-arrow::after{
     content:'→';
     position:absolute;
@@ -545,7 +553,8 @@
 
   @media (max-width: 900px){
     nav ul{display:none;}
-    .cycle-grid{grid-template-columns:repeat(2,1fr); gap:30px;}
+    .cycle-grid{grid-template-columns:1fr; gap:30px; padding:0 20px;}
+    .cycle-item:nth-child(9){grid-column:1;}
     .cycle-arrow{display:none;}
     .kit-header, .booking-container{grid-template-columns:1fr;}
     .pricing-cards, .options-grid{grid-template-columns:1fr;}
