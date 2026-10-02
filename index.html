@@ -188,10 +188,10 @@
     text-align:center;
   }
   .cycle-item:nth-child(1){transform:translate(0, -180px);}
-  .cycle-item:nth-child(3){transform:translate(170px, -55px);}
-  .cycle-item:nth-child(5){transform:translate(105px, 145px);}
-  .cycle-item:nth-child(7){transform:translate(-105px, 145px);}
-  .cycle-item:nth-child(9){transform:translate(-170px, -55px);}
+  .cycle-item:nth-child(2){transform:translate(170px, -55px);}
+  .cycle-item:nth-child(3){transform:translate(105px, 145px);}
+  .cycle-item:nth-child(4){transform:translate(-105px, 145px);}
+  .cycle-item:nth-child(5){transform:translate(-170px, -55px);}
   .cycle-icon{
     width:80px;
     height:80px;
@@ -205,17 +205,6 @@
   }
   .cycle-item h3{font-size:1rem; margin-bottom:6px; font-weight:600;}
   .cycle-item p{font-size:0.85rem; opacity:0.75; line-height:1.4;}
-  .cycle-arrow{
-    position:absolute;
-    font-size:1.8rem;
-    opacity:0.5;
-    color:var(--primary);
-  }
-  .cycle-arrow:nth-child(2){transform:translate(90px, -90px) rotate(-45deg);}
-  .cycle-arrow:nth-child(4){transform:translate(120px, 70px) rotate(45deg);}
-  .cycle-arrow:nth-child(6){transform:translate(0px, 150px) rotate(90deg);}
-  .cycle-arrow:nth-child(8){transform:translate(-120px, 70px) rotate(135deg);}
-  .cycle-arrow:nth-child(10){transform:translate(-90px, -90px) rotate(-135deg);}
 
   /* KIT SECTION */
   .kit-section{
@@ -559,7 +548,6 @@
       transform:none!important;
       max-width:280px;
     }
-    .cycle-arrow{display:none;}
     .kit-header, .booking-container{grid-template-columns:1fr;}
     .pricing-cards, .options-grid{grid-template-columns:1fr;}
     .footer-content{grid-template-columns:1fr;}
@@ -610,31 +598,26 @@
         <h3>Order</h3>
         <p>Give us your dates, headcount and preferences</p>
       </div>
-      <div class="cycle-arrow">→</div>
       <div class="cycle-item">
         <div class="cycle-icon">🚚</div>
         <h3>Receive</h3>
         <p>Pick it up or we'll drop it off</p>
       </div>
-      <div class="cycle-arrow">→</div>
       <div class="cycle-item">
         <div class="cycle-icon">🎉</div>
         <h3>Use</h3>
         <p>Enjoy the party with proper tableware</p>
       </div>
-      <div class="cycle-arrow">→</div>
       <div class="cycle-item">
         <div class="cycle-icon">🧼</div>
         <h3>Wash</h3>
         <p>Either DIY or we'll take care of it for you</p>
       </div>
-      <div class="cycle-arrow">→</div>
       <div class="cycle-item">
         <div class="cycle-icon">♻️</div>
         <h3>Return</h3>
         <p>Drop it back or we'll pick it up</p>
       </div>
-      <div class="cycle-arrow">→</div>
     </div>
   </div>
 </section>
