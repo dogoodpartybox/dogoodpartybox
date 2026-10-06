@@ -565,6 +565,7 @@ app.post('/api/create-payment-intent', async (req, res) => {
       colour,
       washing,
       delivery,
+      deliveryCost,
       collectionDate,
       collectionTime,
       deliveryDate,
@@ -588,6 +589,7 @@ app.post('/api/create-payment-intent', async (req, res) => {
         colour,
         washing,
         delivery,
+        deliveryCost,
         collectionDate,
         collectionTime,
         deliveryDate,
@@ -648,6 +650,7 @@ app.post('/api/stripe-webhook', async (req, res) => {
       colour,
       washing,
       delivery,
+      deliveryCost,
       collectionDate,
       collectionTime,
       deliveryDate,
@@ -722,6 +725,7 @@ app.post('/api/stripe-webhook', async (req, res) => {
         'Expected Return Date': returnDateFormatted,
         'Washing Service (Y/N)': washing === 'we-wash' ? 'Yes' : 'No',
         'Delivery Method (Collect/Deliver)': delivery === 'collect' ? 'Collection' : 'Delivery',
+        'Delivery Cost (£)': deliveryCost || 0,
         'Status (Confirmed/Pending/Cancelled)': 'Confirmed',
         'Payment receipt sent': 'Yes'
       }]);
@@ -733,12 +737,19 @@ app.post('/api/stripe-webhook', async (req, res) => {
 
       if (delivery === 'collect') {
         const collectionTimeDisplay = getTimeWindowDisplay(bookingCollectionTime);
-        receiptText = `Hi ${firstName},\n\nGreat! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.\n\nYour booking is confirmed for ${partyDateFormatted}.\n\nCollection details:\nDate: ${collectionDateFormatted}\nTime window: ${collectionTimeDisplay}\nLocation: 32 East Street, Colchester, CO1 2TP\n\nLook for the black gate with the yellow number 32. The door is at the end of the path.\n\nPlease return the kit by ${returnDateFormatted}.\n\nThanks for supporting a better way to party.\n\nDo better, Do Good.\n\nCheers,\nCaro & Henry\nThe DGPB Team`;
-        receiptHtml = `<p>Hi ${firstName},</p><p>Great! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.</p><p>Your booking is confirmed for <strong>${partyDateFormatted}</strong>.</p><h3>Collection details</h3><p><strong>Date:</strong> ${collectionDateFormatted}<br><strong>Time window:</strong> ${collectionTimeDisplay}<br><strong>Location:</strong> 32 East Street, Colchester, CO1 2TP</p><p>Look for the black gate with the yellow number 32. The door is at the end of the path.</p><p>Please return the kit by <strong>${returnDateFormatted}</strong>.</p><p>Thanks for supporting a better way to party.</p><p>Do better, Do Good.</p><p>Cheers,<br>Caro & Henry<br>The DGPB Team</p>`;
+        const totalAmount = (paymentIntent.amount / 100).toFixed(2);
+        const washingCost = washing === 'we-wash' ? 5 : 0;
+        const kitCost = 25;
+        receiptText = `Hi ${firstName},\n\nGreat! Your payment of £${totalAmount} has been received.\n\nYour booking is confirmed for ${partyDateFormatted}.\n\nBreakdown:\n- Party kit: £${kitCost}\n- Washing service: £${washingCost}\n- Delivery: FREE (collection)\nTotal: £${totalAmount}\n\nCollection details:\nDate: ${collectionDateFormatted}\nTime window: ${collectionTimeDisplay}\nLocation: 32 East Street, Colchester, CO1 2TP\n\nLook for the black gate with the yellow number 32. The door is at the end of the path.\n\nPlease return the kit by ${returnDateFormatted}.\n\nThanks for supporting a better way to party.\n\nDo better, Do Good.\n\nCheers,\nCaro & Henry\nThe DGPB Team`;
+        receiptHtml = `<p>Hi ${firstName},</p><p>Great! Your payment of £${totalAmount} has been received.</p><p>Your booking is confirmed for <strong>${partyDateFormatted}</strong>.</p><h3>Breakdown</h3><ul><li>Party kit: £${kitCost}</li><li>Washing service: £${washingCost}</li><li>Delivery: FREE (collection)</li></ul><p><strong>Total: £${totalAmount}</strong></p><h3>Collection details</h3><p><strong>Date:</strong> ${collectionDateFormatted}<br><strong>Time window:</strong> ${collectionTimeDisplay}<br><strong>Location:</strong> 32 East Street, Colchester, CO1 2TP</p><p>Look for the black gate with the yellow number 32. The door is at the end of the path.</p><p>Please return the kit by <strong>${returnDateFormatted}</strong>.</p><p>Thanks for supporting a better way to party.</p><p>Do better, Do Good.</p><p>Cheers,<br>Caro & Henry<br>The DGPB Team</p>`;
       } else {
         const deliveryTimeDisplay = getTimeWindowDisplay(bookingDeliveryTime);
-        receiptText = `Hi ${firstName},\n\nGreat! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.\n\nYour booking is confirmed for ${partyDateFormatted}.\n\nDelivery details:\nPreferred date: ${deliveryDateFormatted}\nPreferred window: ${deliveryTimeDisplay}\n\nWe'll contact you to confirm the exact time within your preferred window.\n\nPlease return the kit by ${returnDateFormatted} and we'll collect it from you.\n\nThanks for supporting a better way to party.\n\nDo better, Do Good.\n\nCheers,\nCaro & Henry\nThe DGPB Team`;
-        receiptHtml = `<p>Hi ${firstName},</p><p>Great! Your payment of £${(paymentIntent.amount / 100).toFixed(2)} has been received.</p><p>Your booking is confirmed for <strong>${partyDateFormatted}</strong>.</p><h3>Delivery details</h3><p><strong>Preferred date:</strong> ${deliveryDateFormatted}<br><strong>Preferred window:</strong> ${deliveryTimeDisplay}</p><p>We'll contact you to confirm the exact time within your preferred window.</p><p>Please return the kit by <strong>${returnDateFormatted}</strong> and we'll collect it from you.</p><p>Thanks for supporting a better way to party.</p><p>Do better, Do Good.</p><p>Cheers,<br>Caro & Henry<br>The DGPB Team</p>`;
+        const totalAmount = (paymentIntent.amount / 100).toFixed(2);
+        const washingCost = washing === 'we-wash' ? 5 : 0;
+        const kitCost = 25;
+        const deliveryFee = deliveryCost || 0;
+        receiptText = `Hi ${firstName},\n\nGreat! Your payment of £${totalAmount} has been received.\n\nYour booking is confirmed for ${partyDateFormatted}.\n\nBreakdown:\n- Party kit: £${kitCost}\n- Washing service: £${washingCost}\n- Delivery: £${deliveryFee}\nTotal: £${totalAmount}\n\nDelivery details:\nPreferred date: ${deliveryDateFormatted}\nPreferred window: ${deliveryTimeDisplay}\n\nWe'll contact you to confirm the exact time within your preferred window.\n\nPlease return the kit by ${returnDateFormatted} and we'll collect it from you.\n\nThanks for supporting a better way to party.\n\nDo better, Do Good.\n\nCheers,\nCaro & Henry\nThe DGPB Team`;
+        receiptHtml = `<p>Hi ${firstName},</p><p>Great! Your payment of £${totalAmount} has been received.</p><p>Your booking is confirmed for <strong>${partyDateFormatted}</strong>.</p><h3>Breakdown</h3><ul><li>Party kit: £${kitCost}</li><li>Washing service: £${washingCost}</li><li>Delivery: £${deliveryFee}</li></ul><p><strong>Total: £${totalAmount}</strong></p><h3>Delivery details</h3><p><strong>Preferred date:</strong> ${deliveryDateFormatted}<br><strong>Preferred window:</strong> ${deliveryTimeDisplay}</p><p>We'll contact you to confirm the exact time within your preferred window.</p><p>Please return the kit by <strong>${returnDateFormatted}</strong> and we'll collect it from you.</p><p>Thanks for supporting a better way to party.</p><p>Do better, Do Good.</p><p>Cheers,<br>Caro & Henry<br>The DGPB Team</p>`;
       }
 
       const mailOptions = {
