@@ -767,6 +767,31 @@
             <option value="no-preference">No preference</option>
           </select>
         </div>
+        
+        <div id="subtotal-section" style="margin-top: 30px; padding: 20px; background: rgba(255,255,255,0.5); border-radius: 8px; border: 1px solid rgba(0,0,0,0.08);">
+          <h4 style="color: var(--dark); margin-top: 0; margin-bottom: 15px; font-size: 1rem;">Order summary</h4>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.95rem;">
+            <span>Party kit</span>
+            <span>£25.00</span>
+          </div>
+          <div id="washing-line" style="display: none; flex-direction: column; gap: 10px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.95rem;">
+              <span>Washing service</span>
+              <span>£5.00</span>
+            </div>
+          </div>
+          <div id="delivery-line" style="display: none; flex-direction: column; gap: 10px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.95rem;">
+              <span>Delivery fee</span>
+              <span id="delivery-fee-amount">£0.00</span>
+            </div>
+          </div>
+          <div style="border-top: 1px solid rgba(0,0,0,0.1); padding-top: 10px; display: flex; justify-content: space-between; font-weight: 600; font-size: 1.05rem;">
+            <span>Total</span>
+            <span id="total-amount">£25.00</span>
+          </div>
+        </div>
+        
         <div id="payment-section" style="display:none; margin-top: 30px; padding-top: 30px; border-top: 1px solid rgba(0,0,0,0.1);">
           <h3 style="color: var(--dark); margin-bottom: 20px;">Payment details</h3>
           <div class="form-row">
@@ -878,6 +903,7 @@
     const message = document.getElementById('delivery-message');
 
     if (distance > 10) {
+      currentDeliveryCost = 0;
       message.innerHTML = 'Outside our standard delivery area. <a href="mailto:hello@dogoodpartybox.co.uk">Contact us</a> to discuss delivery, or select collection below.';
       message.className = 'form-message error';
       
@@ -887,15 +913,17 @@
         deliverOption.disabled = true;
       }
     } else {
-      let cost = 'Free';
       let costDisplay = '£0';
 
       if (distance > 5) {
-        cost = '£10';
+        currentDeliveryCost = 10;
         costDisplay = '£10';
       } else if (distance > 2) {
-        cost = '£5';
+        currentDeliveryCost = 5;
         costDisplay = '£5';
+      } else {
+        currentDeliveryCost = 0;
+        costDisplay = 'Free';
       }
 
       // Show distance and delivery cost so user can see it before choosing delivery
@@ -909,8 +937,41 @@
         deliverOption.disabled = false;
       }
     }
+    
+    updateSubtotal();
   }
 
+  function updateSubtotal() {
+    let total = 25; // Kit cost
+    
+    // Check washing
+    const washing = document.getElementById('washing').value;
+    const washingLine = document.getElementById('washing-line');
+    if (washing === 'we-wash') {
+      total += 5;
+      washingLine.style.display = 'flex';
+    } else {
+      washingLine.style.display = 'none';
+    }
+    
+    // Check delivery cost
+    const delivery = document.getElementById('delivery').value;
+    const deliveryLine = document.getElementById('delivery-line');
+    const deliveryFeeAmount = document.getElementById('delivery-fee-amount');
+    
+    if (delivery === 'we-deliver') {
+      total += currentDeliveryCost;
+      deliveryFeeAmount.textContent = '£' + currentDeliveryCost.toFixed(2);
+      deliveryLine.style.display = 'flex';
+    } else {
+      deliveryLine.style.display = 'none';
+    }
+    
+    // Update total
+    document.getElementById('total-amount').textContent = '£' + total.toFixed(2);
+  }
+
+  let currentDeliveryCost = 0; // Store the calculated delivery cost
   let postcodeTimeout;
   document.getElementById('postcode').addEventListener('input', async (e) => {
     clearTimeout(postcodeTimeout);
@@ -988,7 +1049,15 @@
       collectionDate.value = '';
       collectionTime.value = '';
     }
+    
+    updateSubtotal();
   });
+  
+  // Update subtotal when washing option changes
+  document.getElementById('washing').addEventListener('change', updateSubtotal);
+  
+  // Initialize subtotal on page load
+  updateSubtotal();
 
 
 
