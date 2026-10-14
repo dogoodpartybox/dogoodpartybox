@@ -361,7 +361,7 @@ app.get('/api/availability', async (req, res) => {
 
 // Handle unavailable date enquiry submissions
 app.post('/api/unavailable-enquiry', async (req, res) => {
-  const { partyDate, firstName, lastName, guests, postcode, email, notes } = req.body;
+  const { partyDate, firstName, lastName, guests, postcode, email, notes, marketingConsent } = req.body;
   
   if (!partyDate || !firstName || !lastName || !guests || !postcode || !email) {
     return res.status(400).json({ success: false, error: 'Missing required fields' });
@@ -387,7 +387,7 @@ app.post('/api/unavailable-enquiry', async (req, res) => {
       // Create the sheet if it doesn't exist
       sheet = await doc.addSheet({
         title: 'Unavailable Enquiries',
-        headerValues: ['Timestamp', 'Party Date', 'First Name', 'Last Name', 'Guests', 'Postcode', 'Email', 'Notes']
+        headerValues: ['Timestamp', 'Party Date', 'First Name', 'Last Name', 'Guests', 'Postcode', 'Email', 'Notes', 'Marketing Consent']
       });
     }
     
@@ -401,7 +401,8 @@ app.post('/api/unavailable-enquiry', async (req, res) => {
         'Guests': guests,
         'Postcode': postcode,
         'Email': email,
-        'Notes': notes || ''
+        'Notes': notes || '',
+        'Marketing Consent': marketingConsent === true ? 'Yes' : 'No'
       }
     ]);
     
@@ -740,7 +741,8 @@ app.post('/api/create-payment-intent', async (req, res) => {
       deliveryDate,
       deliveryTime,
       discountCode,
-      termsAccepted
+      termsAccepted,
+      marketingConsent
     } = req.body;
     const colour = req.body.colour || 'no-preference';
 
@@ -844,7 +846,8 @@ app.post('/api/create-payment-intent', async (req, res) => {
         discountAmount: discountAmount.toFixed(2),
         termsAccepted: 'yes',
         termsVersion: TERMS_VERSION,
-        termsAcceptedAt: new Date().toISOString()
+        termsAcceptedAt: new Date().toISOString(),
+        marketingConsent: marketingConsent === true ? 'yes' : 'no'
       }
     });
 
@@ -910,7 +913,8 @@ app.post('/api/stripe-webhook', async (req, res) => {
       deliveryTime,
       discountCode,
       discountAmount,
-      kit
+      kit,
+      marketingConsent
     } = metadata;
 
     let bookingSaved = false;
@@ -990,7 +994,8 @@ app.post('/api/stripe-webhook', async (req, res) => {
         'Payment receipt sent': 'Yes',
         'Discount Code': discountCode || '',
         'Discount Amount (£)': discountAmount || 0,
-        'Payment Intent ID': paymentIntent.id
+        'Payment Intent ID': paymentIntent.id,
+        'Marketing Consent': marketingConsent === 'yes' ? 'Yes' : 'No'
       }]);
 
       bookingSaved = true;
