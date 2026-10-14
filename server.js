@@ -526,7 +526,7 @@ app.post('/api/log-search', async (req, res) => {
 // ===== PRICING, DELIVERY AND DISCOUNTS =====
 // The server is the source of truth for the price. Amounts sent by the browser are never trusted.
 const KIT_PRICE = 25;
-// Hire terms (keep in step with terms.html)
+// Hire terms (keep in step with the Hire terms pop-up in index.html)
 const TERMS_VERSION = '2026-10';
 const LATE_FEE_PER_DAY = 5;
 const REPLACEMENT_CHARGE_PER_ITEM = 1;
@@ -1011,8 +1011,8 @@ app.post('/api/stripe-webhook', async (req, res) => {
 
       // Short version of the hire terms for the receipt (full terms are on the website)
       const handoverWord = delivery === 'collect' ? 'collection' : 'delivery';
-      const termsSummaryText = `Hire terms in brief:\n- You have one day's grace after the return date. After that a late fee of £${LATE_FEE_PER_DAY} per day applies.\n- Lost or broken plates, bowls, cups and cutlery are charged at £${REPLACEMENT_CHARGE_PER_ITEM} per item.\n- You can cancel for a full refund up to 1 day before your ${handoverWord} date. After that the full booking amount is kept.\nFull terms: https://dogoodpartybox.co.uk/terms.html\n\n`;
-      const termsSummaryHtml = `<h3>Hire terms in brief</h3><ul><li>You have one day's grace after the return date. After that a late fee of £${LATE_FEE_PER_DAY} per day applies.</li><li>Lost or broken plates, bowls, cups and cutlery are charged at £${REPLACEMENT_CHARGE_PER_ITEM} per item.</li><li>You can cancel for a full refund up to 1 day before your ${handoverWord} date. After that the full booking amount is kept.</li></ul><p><a href="https://dogoodpartybox.co.uk/terms.html">Read the full hire terms</a></p>`;
+      const termsSummaryText = `Hire terms in brief:\n- You have one day's grace after the return date. After that a late fee of £${LATE_FEE_PER_DAY} per day applies.\n- Lost or broken plates, bowls, cups and cutlery are charged at £${REPLACEMENT_CHARGE_PER_ITEM} per item.\n- You can cancel for a full refund up to 1 day before your ${handoverWord} date. After that the full booking amount is kept.\nFull terms: https://dogoodpartybox.co.uk/#terms\n\n`;
+      const termsSummaryHtml = `<h3>Hire terms in brief</h3><ul><li>You have one day's grace after the return date. After that a late fee of £${LATE_FEE_PER_DAY} per day applies.</li><li>Lost or broken plates, bowls, cups and cutlery are charged at £${REPLACEMENT_CHARGE_PER_ITEM} per item.</li><li>You can cancel for a full refund up to 1 day before your ${handoverWord} date. After that the full booking amount is kept.</li></ul><p><a href="https://dogoodpartybox.co.uk/#terms">Read the full hire terms</a></p>`;
 
       let receiptText, receiptHtml;
 
