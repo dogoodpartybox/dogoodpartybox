@@ -814,6 +814,10 @@
           </div>
           <div id="card-error" role="alert" class="form-message error" style="display: none; margin-top: 10px;"></div>
         </div>
+        <label style="display: flex; align-items: flex-start; gap: 10px; margin-top: 24px; font-size: 0.9rem; line-height: 1.45; cursor: pointer;">
+          <input type="checkbox" id="terms-consent" style="margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0; cursor: pointer;">
+          <span>I have read and agree to the <a href="terms.html" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline;">hire terms</a>, including the late return fee, the charge for lost or damaged items and the cancellation policy.</span>
+        </label>
         <button class="btn-primary" type="button" id="book-button">Confirm booking</button>
         <p class="secure-note">Secure payment taken at checkout</p>
       </div>
@@ -865,7 +869,7 @@
       </div>
     </div>
     <div class="footer-bottom">
-      <p><a href="#" id="footer-privacy-link" style="color: var(--cream); opacity: 0.8; text-decoration: underline; cursor: pointer;">Privacy Policy</a></p>
+      <p><a href="#" id="footer-privacy-link" style="color: var(--cream); opacity: 0.8; text-decoration: underline; cursor: pointer;">Privacy Policy</a> &nbsp;|&nbsp; <a href="terms.html" style="color: var(--cream); opacity: 0.8; text-decoration: underline;">Hire terms</a></p>
       <p>Do Good Party Box. Keeping parties and the planet in mind.</p>
     </div>
   </div>
@@ -1548,6 +1552,12 @@
       return;
     }
 
+    if (!document.getElementById('terms-consent').checked) {
+      cardError.textContent = 'Please tick the box to confirm you agree to the hire terms';
+      cardError.style.display = 'block';
+      return;
+    }
+
     if (delivery === 'collect' && !document.getElementById('collection-date').value) {
       cardError.textContent = 'Please select a collection date';
       cardError.style.display = 'block';
@@ -1636,7 +1646,8 @@
           collectionTime: collectionTime,
           deliveryDate: deliveryDate,
           deliveryTime: deliveryTime,
-          discountCode: appliedDiscount ? appliedDiscount.code : ''
+          discountCode: appliedDiscount ? appliedDiscount.code : '',
+          termsAccepted: true
         })
       });
 
@@ -1689,6 +1700,7 @@
           document.getElementById('delivery-time').value = '';
           cardElement.clear();
           clearDiscount('');
+          document.getElementById('terms-consent').checked = false;
           document.getElementById('payment-section').style.display = 'none';
           document.getElementById('card-error').style.display = 'none';
           document.getElementById('card-error').style.color = '';
