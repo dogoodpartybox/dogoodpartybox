@@ -776,6 +776,10 @@
             <span>Party kit</span>
             <span>£25.00</span>
           </div>
+          <div id="discount-line" style="display: none; justify-content: space-between; margin-bottom: 10px; font-size: 0.95rem; color: #2F8B6E;">
+            <span id="discount-line-label">Discount</span>
+            <span id="discount-line-amount">-£0.00</span>
+          </div>
           <div id="washing-line" style="display: none; flex-direction: column; gap: 10px;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.95rem;">
               <span>Washing service</span>
@@ -787,6 +791,14 @@
               <span>Delivery fee</span>
               <span id="delivery-fee-amount">£0.00</span>
             </div>
+          </div>
+          <div id="discount-entry" style="margin-bottom: 14px;">
+            <label for="discount-code" style="display:block; font-weight:600; font-size:0.85rem; margin-bottom:6px;">Discount code (optional)</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="discount-code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Code" style="flex:1; width:0; min-width:0; padding:10px 12px; border:1px solid var(--line); border-radius:8px; font-family:'Work Sans'; font-size:0.95rem; background:var(--white); text-transform:uppercase;">
+              <button type="button" id="discount-apply" style="width:auto; margin-top:0; padding:10px 18px; border:1px solid var(--primary); border-radius:8px; background:transparent; color:var(--primary); font-family:'Work Sans'; font-weight:600; font-size:0.9rem; cursor:pointer;">Apply</button>
+            </div>
+            <p id="discount-message" class="form-message" style="display:none;"></p>
           </div>
           <div style="border-top: 1px solid rgba(0,0,0,0.1); padding-top: 10px; display: flex; justify-content: space-between; font-weight: 600; font-size: 1.05rem;">
             <span>Total</span>
@@ -945,6 +957,17 @@
 
   function updateSubtotal() {
     let total = 25; // Kit cost
+
+    // Discount applies to kit hire only
+    const discountLine = document.getElementById('discount-line');
+    if (appliedDiscount) {
+      total -= appliedDiscount.discountAmount;
+      document.getElementById('discount-line-label').textContent = 'Discount (' + appliedDiscount.code + ')';
+      document.getElementById('discount-line-amount').textContent = '-£' + appliedDiscount.discountAmount.toFixed(2);
+      discountLine.style.display = 'flex';
+    } else {
+      discountLine.style.display = 'none';
+    }
     
     // Check washing
     const washing = document.getElementById('washing').value;
@@ -974,6 +997,7 @@
   }
 
   let currentDeliveryCost = 0; // Store the calculated delivery cost
+  let appliedDiscount = null; // { code, discountAmount } once a valid code has been applied
   let postcodeTimeout;
   document.getElementById('postcode').addEventListener('input', async (e) => {
     clearTimeout(postcodeTimeout);
@@ -1057,6 +1081,76 @@
   
   // Update subtotal when washing option changes
   document.getElementById('washing').addEventListener('change', updateSubtotal);
+
+  // Discount code: check with the server, then show the saving in the order summary
+  function setDiscountMessage(text, kind) {
+    const msg = document.getElementById('discount-message');
+    if (!text) { msg.style.display = 'none'; msg.textContent = ''; return; }
+    msg.textContent = text;
+    msg.className = 'form-message ' + kind;
+    msg.style.display = 'block';
+  }
+
+  function clearDiscount(message) {
+    appliedDiscount = null;
+    document.getElementById('discount-code').value = '';
+    document.getElementById('discount-code').disabled = false;
+    const applyBtn = document.getElementById('discount-apply');
+    applyBtn.textContent = 'Apply';
+    applyBtn.disabled = false;
+    setDiscountMessage(message || '', 'error');
+    updateSubtotal();
+  }
+
+  document.getElementById('discount-apply').addEventListener('click', async () => {
+    const applyBtn = document.getElementById('discount-apply');
+    const codeInput = document.getElementById('discount-code');
+
+    // Button doubles as "Remove" once a code is applied
+    if (appliedDiscount) {
+      clearDiscount('');
+      return;
+    }
+
+    const code = codeInput.value.trim();
+    if (!code) {
+      setDiscountMessage('Please enter a code', 'error');
+      return;
+    }
+
+    applyBtn.disabled = true;
+    applyBtn.textContent = 'Checking...';
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/validate-discount`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code })
+      });
+      const data = await response.json();
+      if (data.valid) {
+        appliedDiscount = { code: data.code, discountAmount: Number(data.discountAmount) };
+        codeInput.value = data.code;
+        codeInput.disabled = true;
+        applyBtn.textContent = 'Remove';
+        setDiscountMessage(data.message, 'success');
+        updateSubtotal();
+      } else {
+        applyBtn.textContent = 'Apply';
+        setDiscountMessage(data.message || "That code isn't valid or has expired", 'error');
+      }
+    } catch (err) {
+      applyBtn.textContent = 'Apply';
+      setDiscountMessage('Could not check that code right now. Please try again.', 'error');
+    }
+    applyBtn.disabled = false;
+  });
+
+  document.getElementById('discount-code').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.getElementById('discount-apply').click();
+    }
+  });
   
   // Initialize subtotal on page load
   updateSubtotal();
@@ -1069,7 +1163,7 @@
   document.getElementById('party-date').addEventListener('change', async (e) => {
     const partyDate = e.target.value;
     const partyDateInput = document.getElementById('party-date');
-    const bookButton = document.querySelector('.form-wrapper button');
+    const bookButton = document.getElementById('book-button');
     
     if (!partyDate) return;
     
@@ -1511,6 +1605,7 @@
         return;
       }
       amount += deliveryCost;
+      if (appliedDiscount) amount -= appliedDiscount.discountAmount;
       
       console.log(`Total amount: £${amount} (Kit: £25, Washing: £${washing === 'we-wash' ? 5 : 0}, Delivery: £${deliveryCost})`);
 
@@ -1540,13 +1635,17 @@
           collectionDate: collectionDate,
           collectionTime: collectionTime,
           deliveryDate: deliveryDate,
-          deliveryTime: deliveryTime
+          deliveryTime: deliveryTime,
+          discountCode: appliedDiscount ? appliedDiscount.code : ''
         })
       });
 
       const intentData = await intentResponse.json();
       if (!intentData.clientSecret) {
-        throw new Error('Failed to create payment intent');
+        if (intentData.discountInvalid) {
+          clearDiscount('That discount code is no longer valid, so it has been removed. Please check your total and try again.');
+        }
+        throw new Error(intentData.error || 'Failed to create payment intent');
       }
 
       // Confirm payment with Stripe
@@ -1589,6 +1688,7 @@
           document.getElementById('delivery-date').value = '';
           document.getElementById('delivery-time').value = '';
           cardElement.clear();
+          clearDiscount('');
           document.getElementById('payment-section').style.display = 'none';
           document.getElementById('card-error').style.display = 'none';
           document.getElementById('card-error').style.color = '';
