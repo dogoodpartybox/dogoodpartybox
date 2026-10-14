@@ -816,7 +816,7 @@
         </div>
         <label style="display: flex; align-items: flex-start; gap: 10px; margin-top: 24px; font-size: 0.9rem; line-height: 1.45; cursor: pointer;">
           <input type="checkbox" id="terms-consent" style="margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0; cursor: pointer;">
-          <span>I have read and agree to the <a href="terms.html" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline;">hire terms</a>, including the late return fee, the charge for lost or damaged items and the cancellation policy.</span>
+          <span>I have read and agree to the <a href="#terms" class="open-terms-link" style="color: var(--primary); text-decoration: underline;">hire terms</a>, including the late return fee, the charge for lost or damaged items and the cancellation policy.</span>
         </label>
         <button class="btn-primary" type="button" id="book-button">Confirm booking</button>
         <p class="secure-note">Secure payment taken at checkout</p>
@@ -834,19 +834,72 @@
       
       <h2 style="color: var(--primary); margin-bottom: 30px; margin-top: 0;">Privacy Policy</h2>
       
+      <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">Who we are</h3>
+      <p>Do Good Party Box is run from Colchester, Essex. We decide how your personal data is used. You can contact us at <a href="mailto:hello@dogoodpartybox.co.uk" style="color: var(--primary); text-decoration: underline;">hello@dogoodpartybox.co.uk</a>.</p>
       <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">What information we collect</h3>
-      <p>When you submit an unavailable date enquiry form, we collect your name, email address, postcode, number of guests, and any notes you provide. This information is used solely to respond to your enquiry about party box availability.</p>
-      
+      <p>If you send us an unavailable date enquiry, we collect your name, email address, postcode, number of guests and any notes you provide.</p>
+      <p>If you make a booking, we collect your name, email address, postcode, number of guests, party date, whether you want collection or delivery and the time window you choose, your kit colour and washing choices, any discount code you use, and your agreement to our hire terms.</p>
+      <p>When you pay, your card details go straight to Stripe, our payment provider. We never see or store your full card number.</p>
+      <p>We also record which party dates are searched on the website. This does not include any details that identify you.</p>
       <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">How we use your information</h3>
-      <p>We use your information to contact you about your specific enquiry and may contact you about Do Good Party Box offers or future availability. We do not share your information with third parties and do not use it for any purpose other than responding to your enquiry and marketing our services to you.</p>
-      
+      <p>We use your booking details to take your payment, reserve your kit, send your confirmation and receipt, arrange collection or delivery, and deal with returns, including any late fees or lost or damaged items. We use enquiry details to reply to you and, if you agreed when you sent it, to let you know about future availability and Do Good Party Box offers. We do not send marketing to people who have only made a booking, unless they have agreed to it.</p>
+      <p>We keep records of bookings and payments for our accounts and tax.</p>
+      <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">Who we share it with</h3>
+      <p>We do not sell your information. We use a small number of services to run the business, and they handle your data on our behalf: Stripe (payments), Google (Google Sheets, where we keep booking records), Zoho (sending our emails), Fly.io and GitHub (running this website and booking system), postcodes.io (looking up your postcode to work out delivery distance) and Slack (internal alerts to us). This website also loads fonts from Google Fonts. Some of these providers may process data outside the UK.</p>
       <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">How long we keep your data</h3>
-      <p>We retain your enquiry information for 12 months from the date of submission, unless you request deletion sooner.</p>
-      
+      <p>We keep enquiry information for 12 months from the date you send it, unless you ask us to delete it sooner. We keep booking and payment records for up to 6 years, because we need them for our accounts and tax, and then delete them.</p>
       <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">Your rights</h3>
-      <p>You have the right to request access to your data, ask us to correct or delete it, or object to us contacting you. To exercise these rights, please email <a href="mailto:hello@dogoodpartybox.co.uk" style="color: var(--primary); text-decoration: underline;">hello@dogoodpartybox.co.uk</a>.</p>
+      <p>You have the right to ask for a copy of your data, ask us to correct or delete it, or object to us contacting you. To exercise these rights, please email <a href="mailto:hello@dogoodpartybox.co.uk" style="color: var(--primary); text-decoration: underline;">hello@dogoodpartybox.co.uk</a>. We may need to keep booking and payment records for the period above even if you ask us to delete them. If you are unhappy with how we use your data, you can also complain to the Information Commissioner's Office at ico.org.uk.</p>
       
-      <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 0.9rem; color: #666;">Last updated: September 2026</p>
+      <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 0.9rem; color: #666;">Last updated: October 2026</p>
+    </div>
+  </div>
+
+  <!-- HIRE TERMS MODAL -->
+  <div id="terms-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+    <div style="background: var(--cream); border-radius: 12px; padding: 40px; max-width: 600px; max-height: 80vh; overflow-y: auto; position: relative;">
+      <button id="close-terms-modal" style="position: absolute; top: 20px; right: 20px; background: none; border: none; font-size: 24px; cursor: pointer; color: var(--dark);">×</button>
+      
+      <h2 style="color: var(--primary); margin-bottom: 30px; margin-top: 0;">Hire terms</h2>
+      
+      <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">The short version</h3>
+      <ul style="margin: 0 0 14px; padding-left: 22px;">
+        <li style="margin-bottom: 6px;">Please return your kit by the return date in your confirmation email.</li>
+        <li style="margin-bottom: 6px;">You get one day's grace. After that, a late fee of £5 per day applies.</li>
+        <li style="margin-bottom: 6px;">Lost or broken items are charged at £1 each. Normal wear and tear is fine.</li>
+        <li style="margin-bottom: 6px;">You can cancel for a full refund up to 1 day before your collection or delivery date. After that, the full booking amount is kept.</li>
+      </ul>
+      <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">1. Your booking</h3>
+      <p>These terms apply when you hire a party kit from Do Good Party Box, based in Colchester, Essex. Your booking is confirmed once your payment has been received and we have sent you a confirmation email. By ticking the box on the booking form you agree to these terms.</p>
+      <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">2. What is in a kit</h3>
+      <p>Each kit includes a place setting for every guest you booked for (a plate, bowl, cup, knife, fork and spoon), plus 3 jugs, 3 trays, serving bowls and a tablecloth. Please check the contents against the list in the box when you receive it and tell us straight away if anything is missing.</p>
+      <p>The kit stays our property at all times and is for your own party use.</p>
+      <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">3. Collection, delivery and return</h3>
+      <p>You can collect the kit from us or choose delivery, as selected when you booked. Your confirmation email shows the date your kit is due back, which is 3 days after your party date. If you chose delivery, we will collect the kit from you on that date.</p>
+      <p>Please return everything that came in the box.</p>
+      <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">4. Washing</h3>
+      <p>If you chose our washing service, you do not need to wash anything before it goes back. If you did not, please rinse everything clean before you return it.</p>
+      <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">5. Late returns</h3>
+      <p>Kits are often booked again straight away, so a late return can affect another family's party. You have one day's grace after the return date. After that, a late fee of £5 per day applies until the kit is back with us. We will let you know by email before we ask you to pay anything.</p>
+      <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">6. Lost or damaged items</h3>
+      <p>We expect a little normal wear and tear, and that is fine. If items are lost or broken:</p>
+      <ul style="margin: 0 0 14px; padding-left: 22px;">
+        <li style="margin-bottom: 6px;">Plates, bowls, cups and cutlery are charged at £1 per item lost or broken.</li>
+        <li style="margin-bottom: 6px;">Jugs, trays, serving bowls and tablecloths are charged at what it costs us to replace them. We will tell you the amount first.</li>
+      </ul>
+      <p>We will check the kit when it comes back and email you if anything is missing or broken. We will send you a payment request by email for any amount owed.</p>
+      <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">7. Cancellations and refunds</h3>
+      <p>You can cancel your booking for a full refund up to 1 day before your collection or delivery date. After that, we keep the full booking amount. To cancel, email us at <a href="mailto:hello@dogoodpartybox.co.uk" style="color: var(--primary); text-decoration: underline;">hello@dogoodpartybox.co.uk</a> with your name and party date.</p>
+      <p>Refunds go back to the card you paid with and usually take a few working days to appear.</p>
+      <p>If we ever have to cancel your booking, for example because of illness or a problem with the kit, we will refund you in full.</p>
+      <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">8. Discount codes</h3>
+      <p>Discount codes reduce the kit hire price only. They do not apply to the washing service or delivery.</p>
+      <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">9. Your rights</h3>
+      <p>Nothing in these terms affects your legal rights.</p>
+      <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">10. Contact</h3>
+      <p>Questions? Email <a href="mailto:hello@dogoodpartybox.co.uk" style="color: var(--primary); text-decoration: underline;">hello@dogoodpartybox.co.uk</a>.</p>
+      
+      <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 0.9rem; color: #666;">Last updated: October 2026</p>
     </div>
   </div>
 
@@ -869,13 +922,17 @@
       </div>
     </div>
     <div class="footer-bottom">
-      <p><a href="#" id="footer-privacy-link" style="color: var(--cream); opacity: 0.8; text-decoration: underline; cursor: pointer;">Privacy Policy</a> &nbsp;|&nbsp; <a href="terms.html" style="color: var(--cream); opacity: 0.8; text-decoration: underline;">Hire terms</a></p>
+      <p><a href="#" id="footer-privacy-link" style="color: var(--cream); opacity: 0.8; text-decoration: underline; cursor: pointer;">Privacy Policy</a> &nbsp;|&nbsp; <a href="#terms" class="open-terms-link" style="color: var(--cream); opacity: 0.8; text-decoration: underline; cursor: pointer;">Hire terms</a></p>
       <p>Do Good Party Box. Keeping parties and the planet in mind.</p>
     </div>
   </div>
 </footer>
 
 <script>
+  // Emails link to /#terms and /#privacy: remember that before the hash is cleared
+  const openTermsOnLoad = window.location.hash === '#terms';
+  const openPrivacyOnLoad = window.location.hash === '#privacy';
+
   // Clear hash on page load to prevent unwanted jumping
   if (window.location.hash) {
     history.replaceState(null, '', window.location.pathname + window.location.search);
@@ -1418,6 +1475,32 @@
       privacyModal.style.display = 'flex';
     }
   });
+
+  // Hire terms modal
+  const termsModal = document.getElementById('terms-modal');
+  document.getElementById('close-terms-modal').addEventListener('click', () => {
+    termsModal.style.display = 'none';
+  });
+  termsModal.addEventListener('click', (e) => {
+    if (e.target === termsModal) {
+      termsModal.style.display = 'none';
+    }
+  });
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest ? e.target.closest('.open-terms-link') : null;
+    if (link) {
+      e.preventDefault();
+      termsModal.style.display = 'flex';
+    }
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      termsModal.style.display = 'none';
+      privacyModal.style.display = 'none';
+    }
+  });
+  if (openTermsOnLoad) termsModal.style.display = 'flex';
+  if (openPrivacyOnLoad) privacyModal.style.display = 'flex';
 
 </script>
 
