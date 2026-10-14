@@ -818,6 +818,10 @@
           <input type="checkbox" id="terms-consent" style="margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0; cursor: pointer;">
           <span>I have read and agree to the <a href="#terms" class="open-terms-link" style="color: var(--primary); text-decoration: underline;">hire terms</a>, including the late return fee, the charge for lost or damaged items and the cancellation policy.</span>
         </label>
+        <label style="display: flex; align-items: flex-start; gap: 10px; margin-top: 12px; font-size: 0.9rem; line-height: 1.45; cursor: pointer;">
+          <input type="checkbox" id="marketing-consent" style="margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0; cursor: pointer;">
+          <span>Keep me posted (optional): I'd like occasional emails from Do Good Party Box about future availability, reminders and offers. I can unsubscribe at any time. See our <a href="#" id="booking-privacy-link" style="color: var(--primary); text-decoration: underline; cursor: pointer;">privacy policy</a>.</span>
+        </label>
         <button class="btn-primary" type="button" id="book-button">Confirm booking</button>
         <p class="secure-note">Secure payment taken at checkout</p>
       </div>
@@ -842,7 +846,7 @@
       <p>When you pay, your card details go straight to Stripe, our payment provider. We never see or store your full card number.</p>
       <p>We also record which party dates are searched on the website. This does not include any details that identify you.</p>
       <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">How we use your information</h3>
-      <p>We use your booking details to take your payment, reserve your kit, send your confirmation and receipt, arrange collection or delivery, and deal with returns, including any late fees or lost or damaged items. We use enquiry details to reply to you and, if you agreed when you sent it, to let you know about future availability and Do Good Party Box offers. We do not send marketing to people who have only made a booking, unless they have agreed to it.</p>
+      <p>We use your booking details to take your payment, reserve your kit, send your confirmation and receipt, arrange collection or delivery, and deal with returns, including any late fees or lost or damaged items. We use enquiry details to reply to you. We only send marketing emails (about future availability, reminders and offers) to people who have ticked the optional box to keep in touch, on the booking form or the enquiry form. You can unsubscribe at any time by emailing us and we will stop. We use your details to deal with your booking or enquiry whether or not you tick it.</p>
       <p>We keep records of bookings and payments for our accounts and tax.</p>
       <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">Who we share it with</h3>
       <p>We do not sell your information. We use a small number of services to run the business, and they handle your data on our behalf: Stripe (payments), Google (Google Sheets, where we keep booking records), Zoho (sending our emails), Fly.io and GitHub (running this website and booking system), postcodes.io (looking up your postcode to work out delivery distance) and Slack (internal alerts to us). This website also loads fonts from Google Fonts. Some of these providers may process data outside the UK.</p>
@@ -1338,7 +1342,7 @@
             <div class="form-group" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(0,0,0,0.1);">
               <label style="display: flex; align-items: flex-start; font-weight: normal;">
                 <input type="checkbox" id="privacy-consent" style="margin-right: 10px; margin-top: 4px; cursor: pointer;">
-                <span style="font-size: 0.85rem; line-height: 1.4;">I agree to be contacted about my enquiry and to receive reminders about upcoming party dates. We may also contact you about Do Good Party Box offers. See our <a href="#" id="open-privacy-link" style="color: var(--primary); text-decoration: underline; cursor: pointer;">privacy policy</a> for details on how we handle your data.</span>
+                <span style="font-size: 0.85rem; line-height: 1.4;">Keep me posted (optional): I'd like occasional emails about future availability, reminders and Do Good Party Box offers. I can unsubscribe at any time. We will use your details to reply to your enquiry whether or not you tick this. See our <a href="#" id="open-privacy-link" style="color: var(--primary); text-decoration: underline; cursor: pointer;">privacy policy</a>.</span>
               </label>
             </div>
             
@@ -1366,13 +1370,6 @@
             return;
           }
           
-          if (!privacyConsent) {
-            msg.textContent = 'Please agree to be contacted to proceed';
-            msg.className = 'form-message error';
-            msg.style.display = 'block';
-            return;
-          }
-          
           try {
             btn.disabled = true;
             btn.textContent = 'Sending...';
@@ -1387,7 +1384,8 @@
                 guests: guests,
                 postcode: postcode,
                 email: email,
-                notes: notes
+                notes: notes,
+                marketingConsent: privacyConsent
               })
             });
             
@@ -1470,7 +1468,7 @@
 
   // Event delegation for privacy links (catches both static and dynamically created)
   document.addEventListener('click', (e) => {
-    if (e.target.id === 'open-privacy-link' || e.target.id === 'footer-privacy-link') {
+    if (e.target.id === 'open-privacy-link' || e.target.id === 'footer-privacy-link' || e.target.id === 'booking-privacy-link') {
       e.preventDefault();
       privacyModal.style.display = 'flex';
     }
@@ -1730,7 +1728,8 @@
           deliveryDate: deliveryDate,
           deliveryTime: deliveryTime,
           discountCode: appliedDiscount ? appliedDiscount.code : '',
-          termsAccepted: true
+          termsAccepted: true,
+          marketingConsent: document.getElementById('marketing-consent').checked
         })
       });
 
@@ -1784,6 +1783,7 @@
           cardElement.clear();
           clearDiscount('');
           document.getElementById('terms-consent').checked = false;
+          document.getElementById('marketing-consent').checked = false;
           document.getElementById('payment-section').style.display = 'none';
           document.getElementById('card-error').style.display = 'none';
           document.getElementById('card-error').style.color = '';
