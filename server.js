@@ -4,14 +4,15 @@ const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const nodemailer = require('nodemailer');
 const cron = require('node-cron');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 require('dotenv').config();
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
+app.set('trust proxy', 1); // behind Fly's proxy, so req.ip is the real visitor (used for rate limiting)
 
 // Enable CORS for your domain
 app.use(cors({
-  origin: ['https://dogoodpartybox.co.uk', 'http://localhost:3000'],
+  origin: ['https://dogoodpartybox.co.uk', 'https://www.dogoodpartybox.co.uk', 'http://localhost:3000'],
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type']
 }));
@@ -242,9 +243,6 @@ async function isDateAvailable(partyDateStr) {
       console.log(`Booking ID[0]: "${rawData[0]}"`);
       console.log(`Pastel Booked[1]: "${rawData[1]}"`);
       console.log(`Bright Booked[2]: "${rawData[2]}"`);
-      console.log(`First Name[3]: "${rawData[3]}"`);
-      console.log(`Last Name[4]: "${rawData[4]}"`);
-      console.log(`Customer Email[5]: "${rawData[5]}"`);
       console.log(`Party Date[6]: "${rawData[6]}"`);
       console.log(`Collection Date[7]: "${rawData[7]}"`);
       console.log(`Collection Time[8]: "${rawData[8]}"`);
@@ -525,60 +523,299 @@ app.post('/api/log-search', async (req, res) => {
   }
 });
 
-// Diagnostic endpoint
-app.get('/api/debug', async (req, res) => {
+// ===== PRICING, DELIVERY AND DISCOUNTS =====
+// The server is the source of truth for the price. Amounts sent by the browser are never trusted.
+const KIT_PRICE = 25;
+const WASHING_PRICE = 5;
+const MIN_KIT_PRICE_AFTER_DISCOUNT = 1; // a discount can never take the kit below this (Stripe's minimum charge is 30p)
+
+function roundMoney(n) {
+  return Math.round(n * 100) / 100;
+}
+
+function haversineMiles(lat1, lon1, lat2, lon2) {
+  const R = 3959; // Earth's radius in miles
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Same bands as the website: up to 2 miles free, up to 5 miles £5, up to 10 miles £10, beyond that no delivery
+async function getDeliveryCostForPostcode(postcode) {
+  const response = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(postcode)}`);
+  if (!response.ok) return null;
+  const data = await response.json();
+  if (!data.result) return null;
+  const distance = haversineMiles(BUSINESS_LAT, BUSINESS_LNG, data.result.latitude, data.result.longitude);
+  if (distance > 10) return null;
+  if (distance > 5) return 10;
+  if (distance > 2) return 5;
+  return 0;
+}
+
+async function getSheetsDoc() {
+  const serviceAccountAuth = new JWT({
+    email: process.env.GOOGLE_CLIENT_EMAIL,
+    key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    scopes: [
+      'https://www.googleapis.com/auth/spreadsheets',
+      'https://www.googleapis.com/auth/drive'
+    ]
+  });
+  const doc = new GoogleSpreadsheet(process.env.SHEET_ID, serviceAccountAuth);
+  await doc.loadInfo();
+  return doc;
+}
+
+async function notifySlack(text) {
+  if (!process.env.SLACK_WEBHOOK_URL) return;
   try {
-    const rows = await getSheetData();
-    
-    if (rows.length === 0) {
-      return res.json({ success: true, message: 'No rows in sheet' });
-    }
-    
-    const data = rows.map((row, idx) => {
-      return {
-        rowIndex: idx,
-        rawData: row._rawData
-      };
-    });
-    
-    res.json({ 
-      success: true, 
-      rows: data 
+    await fetch(process.env.SLACK_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
     });
   } catch (error) {
-    res.json({ success: false, error: error.message, stack: error.stack });
+    console.error('Error sending Slack notification:', error);
+  }
+}
+
+// Discount codes live in a "Discount Codes" tab of the same Google Sheet so they can be added or switched off without touching code.
+// Columns: Code | Type (percent or fixed) | Value | Active (Y/N) | Expires (optional) | Max Uses (optional) | Times Used | Notes
+const DISCOUNT_SHEET_TITLE = 'Discount Codes';
+const DISCOUNT_HEADERS = ['Code', 'Type', 'Value', 'Active', 'Expires', 'Max Uses', 'Times Used', 'Notes'];
+
+function parseFlexibleDate(str) {
+  if (!str) return null;
+  const s = String(str).trim();
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+  return null;
+}
+
+async function loadDiscountRow(rawCode) {
+  const code = String(rawCode || '').trim().toUpperCase();
+  if (!code) return null;
+  const doc = await getSheetsDoc();
+  const sheet = doc.sheetsByTitle[DISCOUNT_SHEET_TITLE];
+  if (!sheet) {
+    // First use: create the tab with headers (same approach as the enquiry and search log tabs)
+    await doc.addSheet({ title: DISCOUNT_SHEET_TITLE, headerValues: DISCOUNT_HEADERS });
+    return null;
+  }
+  const rows = await sheet.getRows();
+  const headers = sheet.headerValues;
+  const colIndex = (name) => headers.indexOf(name);
+  const row = rows.find(r => String(r._rawData[colIndex('Code')] || '').trim().toUpperCase() === code);
+  if (!row) return null;
+  const get = (name) => {
+    const i = colIndex(name);
+    return i === -1 ? '' : String(row._rawData[i] === undefined ? '' : row._rawData[i]).trim();
+  };
+  return { code, row, get };
+}
+
+// Returns { valid: false } or { valid: true, code, discountAmount }
+async function evaluateDiscount(rawCode) {
+  const found = await loadDiscountRow(rawCode);
+  if (!found) return { valid: false };
+  const { code, get } = found;
+
+  if (!['y', 'yes', 'true'].includes(get('Active').toLowerCase())) return { valid: false };
+
+  const expires = parseFlexibleDate(get('Expires'));
+  if (get('Expires') && !expires) return { valid: false }; // unreadable date: fail closed
+  if (expires) {
+    expires.setHours(23, 59, 59, 999); // valid right through the expiry day
+    if (new Date() > expires) return { valid: false };
+  }
+
+  const maxUsesRaw = get('Max Uses');
+  if (maxUsesRaw) {
+    const maxUses = parseInt(maxUsesRaw, 10);
+    const timesUsed = parseInt(get('Times Used') || '0', 10) || 0;
+    if (isNaN(maxUses) || timesUsed >= maxUses) return { valid: false };
+  }
+
+  const type = get('Type').toLowerCase();
+  const value = parseFloat(get('Value').replace(/[£%\s,]/g, ''));
+  if (isNaN(value) || value <= 0) return { valid: false };
+
+  let amount;
+  if (type === 'percent') {
+    if (value >= 100) return { valid: false }; // 100% codes are not supported (card payments cannot be £0)
+    amount = KIT_PRICE * value / 100;
+  } else if (type === 'fixed') {
+    amount = value;
+  } else {
+    return { valid: false };
+  }
+
+  // Discounts apply to kit hire only, and can never take the kit below the minimum
+  amount = roundMoney(Math.min(amount, KIT_PRICE - MIN_KIT_PRICE_AFTER_DISCOUNT));
+  if (!(amount > 0)) return { valid: false };
+
+  return { valid: true, code, discountAmount: amount };
+}
+
+// Only counted once a payment has actually succeeded
+async function recordDiscountUse(rawCode) {
+  const found = await loadDiscountRow(rawCode);
+  if (!found) return;
+  const timesUsed = parseInt(found.get('Times Used') || '0', 10) || 0;
+  found.row.set('Times Used', timesUsed + 1);
+  await found.row.save();
+}
+
+// Simple in-memory limiter so codes cannot be guessed in bulk (20 attempts per 10 minutes per visitor)
+const discountAttempts = new Map();
+function discountRateLimited(ip) {
+  const now = Date.now();
+  const windowMs = 10 * 60 * 1000;
+  const maxAttempts = 20;
+  if (discountAttempts.size > 1000) {
+    for (const [key, entry] of discountAttempts) {
+      if (entry.resetAt < now) discountAttempts.delete(key);
+    }
+  }
+  const entry = discountAttempts.get(ip);
+  if (!entry || entry.resetAt < now) {
+    discountAttempts.set(ip, { count: 1, resetAt: now + windowMs });
+    return false;
+  }
+  entry.count++;
+  return entry.count > maxAttempts;
+}
+
+// Check a discount code (used by the Apply button on the website)
+app.post('/api/validate-discount', async (req, res) => {
+  const { code } = req.body || {};
+  if (!code || !String(code).trim()) {
+    return res.status(400).json({ valid: false, message: 'Please enter a code' });
+  }
+  if (discountRateLimited(req.ip)) {
+    return res.status(429).json({ valid: false, message: 'Too many attempts. Please try again in a few minutes.' });
+  }
+  try {
+    const result = await evaluateDiscount(code);
+    if (!result.valid) {
+      return res.json({ valid: false, message: "That code isn't valid or has expired" });
+    }
+    res.json({
+      valid: true,
+      code: result.code,
+      discountAmount: result.discountAmount,
+      message: `Code ${result.code} applied: £${result.discountAmount.toFixed(2)} off kit hire`
+    });
+  } catch (error) {
+    console.error('Error validating discount code:', error);
+    res.status(500).json({ valid: false, message: 'Could not check that code right now. Please try again.' });
   }
 });
 
 // Create payment intent for Stripe
+// The price is worked out here from the booking details. Any amount sent by the browser is ignored.
 app.post('/api/create-payment-intent', async (req, res) => {
   try {
     const {
-      amount,
-      currency = 'gbp',
       customerEmail,
       firstName,
       lastName,
       partyDate,
       guests,
       postcode,
-      colour,
       washing,
       delivery,
-      deliveryCost,
       collectionDate,
       collectionTime,
       deliveryDate,
-      deliveryTime
+      deliveryTime,
+      discountCode
     } = req.body;
+    const colour = req.body.colour || 'no-preference';
 
-    if (!amount || amount <= 0) {
-      return res.status(400).json({ error: 'Invalid amount' });
+    if (!firstName || !lastName || !customerEmail || !partyDate || !postcode || !guests) {
+      return res.status(400).json({ error: 'Please fill in all required fields' });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(customerEmail))) {
+      return res.status(400).json({ error: 'Please enter a valid email address' });
+    }
+    if (!['collect', 'we-deliver'].includes(delivery)) {
+      return res.status(400).json({ error: 'Please choose delivery or collection' });
+    }
+    if (!['rinse-yourself', 'we-wash'].includes(washing)) {
+      return res.status(400).json({ error: 'Please choose a washing option' });
+    }
+    if (!['pastel', 'bright', 'no-preference'].includes(colour)) {
+      return res.status(400).json({ error: 'Please choose a valid kit colour' });
+    }
+    if (delivery === 'collect' && (!collectionDate || !collectionTime)) {
+      return res.status(400).json({ error: 'Please select a collection date and time window' });
+    }
+    if (delivery === 'we-deliver' && (!deliveryDate || !deliveryTime)) {
+      return res.status(400).json({ error: 'Please select a delivery date and time window' });
     }
 
+    const partyDay = new Date(partyDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    partyDay.setHours(0, 0, 0, 0);
+    if (isNaN(partyDay.getTime()) || partyDay <= today) {
+      return res.status(400).json({ error: 'Please choose a party date in the future' });
+    }
+
+    // Check the date again now, and decide which kit this booking gets
+    const availability = await isDateAvailable(partyDate);
+    let kit = null;
+    if (colour === 'pastel') {
+      kit = availability.pastelAvailable ? 'pastel' : null;
+    } else if (colour === 'bright') {
+      kit = availability.brightAvailable ? 'bright' : null;
+    } else if (availability.pastelAvailable) {
+      kit = 'pastel';
+    } else if (availability.brightAvailable) {
+      kit = 'bright';
+    }
+    if (!kit) {
+      return res.status(409).json({ error: 'Sorry, that kit is no longer available for your date. Please choose another date or colour.' });
+    }
+
+    let deliveryCost = 0;
+    if (delivery === 'we-deliver') {
+      deliveryCost = await getDeliveryCostForPostcode(postcode);
+      if (deliveryCost === null) {
+        return res.status(400).json({ error: 'Your postcode is outside our delivery area. Please choose collection or contact us.' });
+      }
+    }
+
+    let discountAmount = 0;
+    let appliedCode = '';
+    if (discountCode && String(discountCode).trim()) {
+      if (discountRateLimited(req.ip)) {
+        return res.status(429).json({ error: 'Too many discount code attempts. Please try again in a few minutes.' });
+      }
+      const result = await evaluateDiscount(discountCode);
+      if (!result.valid) {
+        return res.status(400).json({
+          error: 'That discount code is no longer valid, so it has been removed. Please check your total and try again.',
+          discountInvalid: true
+        });
+      }
+      discountAmount = result.discountAmount;
+      appliedCode = result.code;
+    }
+
+    const washingCost = washing === 'we-wash' ? WASHING_PRICE : 0;
+    const total = roundMoney(KIT_PRICE - discountAmount + washingCost + deliveryCost);
+
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Convert to pence
-      currency,
+      amount: Math.round(total * 100), // Convert to pence
+      currency: 'gbp',
       metadata: {
         customerEmail,
         firstName,
@@ -587,23 +824,28 @@ app.post('/api/create-payment-intent', async (req, res) => {
         guests,
         postcode,
         colour,
+        kit,
         washing,
         delivery,
         deliveryCost,
         collectionDate,
         collectionTime,
         deliveryDate,
-        deliveryTime
+        deliveryTime,
+        discountCode: appliedCode,
+        discountAmount: discountAmount.toFixed(2)
       }
     });
 
     res.json({
       clientSecret: paymentIntent.client_secret,
-      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY
+      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+      total,
+      kit
     });
   } catch (error) {
     console.error('Error creating payment intent:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Something went wrong setting up your payment. Please try again.' });
   }
 });
 
@@ -654,9 +896,13 @@ app.post('/api/stripe-webhook', async (req, res) => {
       collectionDate,
       collectionTime,
       deliveryDate,
-      deliveryTime
+      deliveryTime,
+      discountCode,
+      discountAmount,
+      kit
     } = metadata;
 
+    let bookingSaved = false;
     try {
       // Add booking to Google Sheets
       const serviceAccountAuth = new JWT({
@@ -676,17 +922,20 @@ app.post('/api/stripe-webhook', async (req, res) => {
         throw new Error('Bookings sheet not found');
       }
 
-      // Determine kit selection based on colour preference
-      let pastelBooked = '';
-      let brightBooked = '';
-      if (colour === 'pastel') {
-        pastelBooked = 'Pastel';
-      } else if (colour === 'bright') {
-        brightBooked = 'Bright';
-      } else if (colour === 'no-preference') {
-        // For no preference, default to Pastel
-        pastelBooked = 'Pastel';
+      // Stripe can send the same event more than once, so skip payments already recorded
+      const existingRows = await bookingsSheet.getRows();
+      const paymentIdColumn = bookingsSheet.headerValues.indexOf('Payment Intent ID');
+      if (paymentIdColumn === -1) {
+        console.warn("Bookings sheet has no 'Payment Intent ID' column. Add it so duplicate webhook deliveries can be ignored.");
+      } else if (existingRows.some(r => r._rawData[paymentIdColumn] === paymentIntent.id)) {
+        console.log(`Payment ${paymentIntent.id} already recorded, skipping duplicate webhook`);
+        return res.json({ received: true });
       }
+
+      // Use the kit assigned when the payment was created (falls back to the colour choice for older payments)
+      const assignedKit = kit || (colour === 'bright' ? 'bright' : 'pastel');
+      const pastelBooked = assignedKit === 'pastel' ? 'Pastel' : '';
+      const brightBooked = assignedKit === 'bright' ? 'Bright' : '';
 
       // Determine collection/delivery details
       const bookingCollectionDate = delivery === 'collect' ? collectionDate : '';
@@ -727,12 +976,28 @@ app.post('/api/stripe-webhook', async (req, res) => {
         'Delivery Method (Collect/Deliver)': delivery === 'collect' ? 'Collection' : 'Delivery',
         'Delivery Cost (£)': deliveryCost || 0,
         'Status (Confirmed/Pending/Cancelled)': 'Confirmed',
-        'Payment receipt sent': 'Yes'
+        'Payment receipt sent': 'Yes',
+        'Discount Code': discountCode || '',
+        'Discount Amount (£)': discountAmount || 0,
+        'Payment Intent ID': paymentIntent.id
       }]);
 
+      bookingSaved = true;
       console.log(`Booking added to sheet for ${firstName} ${lastName}: ${partyDateFormatted}`);
 
+      if (discountCode) {
+        try {
+          await recordDiscountUse(discountCode);
+        } catch (usageError) {
+          console.error('Could not update discount usage count:', usageError);
+        }
+      }
+
       // Send payment receipt email (detailed version based on delivery method)
+      const discountValue = parseFloat(discountAmount || '0') || 0;
+      const discountLineText = discountValue > 0 ? `- Discount (${discountCode}): -£${discountValue.toFixed(2)}\n` : '';
+      const discountLineHtml = discountValue > 0 ? `<li>Discount (${discountCode}): -£${discountValue.toFixed(2)}</li>` : '';
+
       let receiptText, receiptHtml;
 
       if (delivery === 'collect') {
@@ -740,16 +1005,16 @@ app.post('/api/stripe-webhook', async (req, res) => {
         const totalAmount = (paymentIntent.amount / 100).toFixed(2);
         const washingCost = washing === 'we-wash' ? 5 : 0;
         const kitCost = 25;
-        receiptText = `Hi ${firstName},\n\nGreat! Your payment of £${totalAmount} has been received.\n\nYour booking is confirmed for ${partyDateFormatted}.\n\nBreakdown:\n- Party kit: £${kitCost}\n- Washing service: £${washingCost}\n- Delivery: FREE (collection)\nTotal: £${totalAmount}\n\nCollection details:\nDate: ${collectionDateFormatted}\nTime window: ${collectionTimeDisplay}\nLocation: 32 East Street, Colchester, CO1 2TP\n\nLook for the black gate with the yellow number 32. The door is at the end of the path.\n\nPlease return the kit by ${returnDateFormatted}.\n\nThanks for supporting a better way to party.\n\nDo better, Do Good.\n\nCheers,\nCaro & Henry\nThe DGPB Team`;
-        receiptHtml = `<p>Hi ${firstName},</p><p>Great! Your payment of £${totalAmount} has been received.</p><p>Your booking is confirmed for <strong>${partyDateFormatted}</strong>.</p><h3>Breakdown</h3><ul><li>Party kit: £${kitCost}</li><li>Washing service: £${washingCost}</li><li>Delivery: FREE (collection)</li></ul><p><strong>Total: £${totalAmount}</strong></p><h3>Collection details</h3><p><strong>Date:</strong> ${collectionDateFormatted}<br><strong>Time window:</strong> ${collectionTimeDisplay}<br><strong>Location:</strong> 32 East Street, Colchester, CO1 2TP</p><p>Look for the black gate with the yellow number 32. The door is at the end of the path.</p><p>Please return the kit by <strong>${returnDateFormatted}</strong>.</p><p>Thanks for supporting a better way to party.</p><p>Do better, Do Good.</p><p>Cheers,<br>Caro & Henry<br>The DGPB Team</p>`;
+        receiptText = `Hi ${firstName},\n\nGreat! Your payment of £${totalAmount} has been received.\n\nYour booking is confirmed for ${partyDateFormatted}.\n\nBreakdown:\n- Party kit: £${kitCost}\n${discountLineText}- Washing service: £${washingCost}\n- Delivery: FREE (collection)\nTotal: £${totalAmount}\n\nCollection details:\nDate: ${collectionDateFormatted}\nTime window: ${collectionTimeDisplay}\nLocation: 32 East Street, Colchester, CO1 2TP\n\nLook for the black gate with the yellow number 32. The door is at the end of the path.\n\nPlease return the kit by ${returnDateFormatted}.\n\nThanks for supporting a better way to party.\n\nDo better, Do Good.\n\nCheers,\nCaro & Henry\nThe DGPB Team`;
+        receiptHtml = `<p>Hi ${firstName},</p><p>Great! Your payment of £${totalAmount} has been received.</p><p>Your booking is confirmed for <strong>${partyDateFormatted}</strong>.</p><h3>Breakdown</h3><ul><li>Party kit: £${kitCost}</li>${discountLineHtml}<li>Washing service: £${washingCost}</li><li>Delivery: FREE (collection)</li></ul><p><strong>Total: £${totalAmount}</strong></p><h3>Collection details</h3><p><strong>Date:</strong> ${collectionDateFormatted}<br><strong>Time window:</strong> ${collectionTimeDisplay}<br><strong>Location:</strong> 32 East Street, Colchester, CO1 2TP</p><p>Look for the black gate with the yellow number 32. The door is at the end of the path.</p><p>Please return the kit by <strong>${returnDateFormatted}</strong>.</p><p>Thanks for supporting a better way to party.</p><p>Do better, Do Good.</p><p>Cheers,<br>Caro & Henry<br>The DGPB Team</p>`;
       } else {
         const deliveryTimeDisplay = getTimeWindowDisplay(bookingDeliveryTime);
         const totalAmount = (paymentIntent.amount / 100).toFixed(2);
         const washingCost = washing === 'we-wash' ? 5 : 0;
         const kitCost = 25;
         const deliveryFee = deliveryCost || 0;
-        receiptText = `Hi ${firstName},\n\nGreat! Your payment of £${totalAmount} has been received.\n\nYour booking is confirmed for ${partyDateFormatted}.\n\nBreakdown:\n- Party kit: £${kitCost}\n- Washing service: £${washingCost}\n- Delivery: £${deliveryFee}\nTotal: £${totalAmount}\n\nDelivery details:\nPreferred date: ${deliveryDateFormatted}\nPreferred window: ${deliveryTimeDisplay}\n\nWe'll contact you to confirm the exact time within your preferred window.\n\nPlease return the kit by ${returnDateFormatted} and we'll collect it from you.\n\nThanks for supporting a better way to party.\n\nDo better, Do Good.\n\nCheers,\nCaro & Henry\nThe DGPB Team`;
-        receiptHtml = `<p>Hi ${firstName},</p><p>Great! Your payment of £${totalAmount} has been received.</p><p>Your booking is confirmed for <strong>${partyDateFormatted}</strong>.</p><h3>Breakdown</h3><ul><li>Party kit: £${kitCost}</li><li>Washing service: £${washingCost}</li><li>Delivery: £${deliveryFee}</li></ul><p><strong>Total: £${totalAmount}</strong></p><h3>Delivery details</h3><p><strong>Preferred date:</strong> ${deliveryDateFormatted}<br><strong>Preferred window:</strong> ${deliveryTimeDisplay}</p><p>We'll contact you to confirm the exact time within your preferred window.</p><p>Please return the kit by <strong>${returnDateFormatted}</strong> and we'll collect it from you.</p><p>Thanks for supporting a better way to party.</p><p>Do better, Do Good.</p><p>Cheers,<br>Caro & Henry<br>The DGPB Team</p>`;
+        receiptText = `Hi ${firstName},\n\nGreat! Your payment of £${totalAmount} has been received.\n\nYour booking is confirmed for ${partyDateFormatted}.\n\nBreakdown:\n- Party kit: £${kitCost}\n${discountLineText}- Washing service: £${washingCost}\n- Delivery: £${deliveryFee}\nTotal: £${totalAmount}\n\nDelivery details:\nPreferred date: ${deliveryDateFormatted}\nPreferred window: ${deliveryTimeDisplay}\n\nWe'll contact you to confirm the exact time within your preferred window.\n\nPlease return the kit by ${returnDateFormatted} and we'll collect it from you.\n\nThanks for supporting a better way to party.\n\nDo better, Do Good.\n\nCheers,\nCaro & Henry\nThe DGPB Team`;
+        receiptHtml = `<p>Hi ${firstName},</p><p>Great! Your payment of £${totalAmount} has been received.</p><p>Your booking is confirmed for <strong>${partyDateFormatted}</strong>.</p><h3>Breakdown</h3><ul><li>Party kit: £${kitCost}</li>${discountLineHtml}<li>Washing service: £${washingCost}</li><li>Delivery: £${deliveryFee}</li></ul><p><strong>Total: £${totalAmount}</strong></p><h3>Delivery details</h3><p><strong>Preferred date:</strong> ${deliveryDateFormatted}<br><strong>Preferred window:</strong> ${deliveryTimeDisplay}</p><p>We'll contact you to confirm the exact time within your preferred window.</p><p>Please return the kit by <strong>${returnDateFormatted}</strong> and we'll collect it from you.</p><p>Thanks for supporting a better way to party.</p><p>Do better, Do Good.</p><p>Cheers,<br>Caro & Henry<br>The DGPB Team</p>`;
       }
 
       const mailOptions = {
@@ -765,7 +1030,12 @@ app.post('/api/stripe-webhook', async (req, res) => {
 
     } catch (error) {
       console.error('Error processing payment confirmation:', error);
-      // Don't fail the webhook response even if email fails
+      if (!bookingSaved) {
+        // The customer has paid but there is no booking row. Ask Stripe to retry and raise the alarm.
+        await notifySlack(`🚨 PAYMENT TAKEN BUT BOOKING NOT SAVED. Payment ${paymentIntent.id}: ${firstName} ${lastName}, ${customerEmail}, party date ${partyDate}. Stripe will retry automatically; check the Bookings sheet and add it by hand if it does not appear.`);
+        return res.status(500).json({ error: 'Booking could not be saved' });
+      }
+      // The booking is saved, so a failed email or usage count must not make Stripe retry
     }
   }
 
