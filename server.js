@@ -530,6 +530,13 @@ const KIT_PRICE = 25;
 // Hire terms (keep in step with the Hire terms pop-up in index.html)
 const TERMS_VERSION = '2026-10';
 const LATE_FEE_PER_DAY = 5;
+
+// Where customers collect from. what3words is the most precise; the Maps link is a backup.
+// To use an exact pin drop, open the spot in Google Maps, choose Share, copy the link and paste it into COLLECTION_MAPS_URL below.
+const COLLECTION_ADDRESS = '32 East Street, Colchester, CO1 2TP';
+const COLLECTION_W3W = '///trace.meal.sling';
+const COLLECTION_W3W_URL = 'https://what3words.com/trace.meal.sling';
+const COLLECTION_MAPS_URL = 'https://maps.app.goo.gl/6BJwnWAwNNY7HAVV9'; // pin drop at 51.889956, 0.917591
 const REPLACEMENT_CHARGE_PER_ITEM = 1;
 const WASHING_PRICE = 5;
 const MIN_KIT_PRICE_AFTER_DISCOUNT = 1; // a discount can never take the kit below this (Stripe's minimum charge is 30p)
@@ -573,6 +580,24 @@ async function getSheetsDoc() {
   const doc = new GoogleSpreadsheet(process.env.SHEET_ID, serviceAccountAuth);
   await doc.loadInfo();
   return doc;
+}
+
+// Where internal alerts (new bookings, problems) are emailed. Keeps the customer inbox clean. Override with the ALERT_EMAIL secret on Fly.
+const ALERT_EMAIL = process.env.ALERT_EMAIL || 'dogoodpartybox@gmail.com';
+
+// Tell the owners something happened: an email to ALERT_EMAIL, plus Slack if it is set up. Never throws.
+async function notifyOwners(subject, text) {
+  try {
+    await transporter.sendMail({
+      from: process.env.ZOHO_EMAIL,
+      to: ALERT_EMAIL,
+      subject,
+      text
+    });
+  } catch (error) {
+    console.error('Error sending alert email:', error);
+  }
+  await notifySlack(`${subject}\n${text}`);
 }
 
 async function notifySlack(text) {
@@ -1001,6 +1026,13 @@ app.post('/api/stripe-webhook', async (req, res) => {
       bookingSaved = true;
       console.log(`Booking added to sheet for ${firstName} ${lastName}: ${partyDateFormatted}`);
 
+      // Tell us straight away (before the customer email, so a failed email cannot hide a booking)
+      const alertTotal = (paymentIntent.amount / 100).toFixed(2);
+      const alertHandover = delivery === 'collect'
+        ? `Collection ${collectionDateFormatted}, ${getTimeWindowDisplay(bookingCollectionTime)}`
+        : `Delivery ${deliveryDateFormatted}, ${getTimeWindowDisplay(bookingDeliveryTime)}`;
+      await notifyOwners(`🎉 New booking: ${firstName} ${lastName}, ${partyDateFormatted}`, `Customer: ${firstName} ${lastName}, ${customerEmail}\nParty date: ${partyDateFormatted} (${guests || '?'} guests, ${assignedKit} kit)\n${alertHandover}\nReturn by: ${returnDateFormatted}\nTotal paid: £${alertTotal}${washing === 'we-wash' ? ' (incl. washing)' : ''}${discountCode ? ` (code ${discountCode})` : ''}`);
+
       if (discountCode) {
         try {
           await recordDiscountUse(discountCode);
@@ -1026,8 +1058,8 @@ app.post('/api/stripe-webhook', async (req, res) => {
         const totalAmount = (paymentIntent.amount / 100).toFixed(2);
         const washingCost = washing === 'we-wash' ? 5 : 0;
         const kitCost = 25;
-        receiptText = `Hi ${firstName},\n\nGreat! Your payment of £${totalAmount} has been received.\n\nYour booking is confirmed for ${partyDateFormatted}.\n\nBreakdown:\n- Party kit: £${kitCost}\n${discountLineText}- Washing service: £${washingCost}\n- Delivery: FREE (collection)\nTotal: £${totalAmount}\n\nCollection details:\nDate: ${collectionDateFormatted}\nTime window: ${collectionTimeDisplay}\nLocation: 32 East Street, Colchester, CO1 2TP\n\nLook for the black gate with the yellow number 32. The door is at the end of the path.\n\nPlease return the kit by ${returnDateFormatted}.\n\n${termsSummaryText}Thanks for supporting a better way to party.\n\nDo better, Do Good.\n\nCheers,\nCaro & Henry\nThe DGPB Team`;
-        receiptHtml = `<p>Hi ${firstName},</p><p>Great! Your payment of £${totalAmount} has been received.</p><p>Your booking is confirmed for <strong>${partyDateFormatted}</strong>.</p><h3>Breakdown</h3><ul><li>Party kit: £${kitCost}</li>${discountLineHtml}<li>Washing service: £${washingCost}</li><li>Delivery: FREE (collection)</li></ul><p><strong>Total: £${totalAmount}</strong></p><h3>Collection details</h3><p><strong>Date:</strong> ${collectionDateFormatted}<br><strong>Time window:</strong> ${collectionTimeDisplay}<br><strong>Location:</strong> 32 East Street, Colchester, CO1 2TP</p><p>Look for the black gate with the yellow number 32. The door is at the end of the path.</p><p>Please return the kit by <strong>${returnDateFormatted}</strong>.</p>${termsSummaryHtml}<p>Thanks for supporting a better way to party.</p><p>Do better, Do Good.</p><p>Cheers,<br>Caro & Henry<br>The DGPB Team</p>`;
+        receiptText = `Hi ${firstName},\n\nGreat! Your payment of £${totalAmount} has been received.\n\nYour booking is confirmed for ${partyDateFormatted}.\n\nBreakdown:\n- Party kit: £${kitCost}\n${discountLineText}- Washing service: £${washingCost}\n- Delivery: FREE (collection)\nTotal: £${totalAmount}\n\nCollection details:\nDate: ${collectionDateFormatted}\nTime window: ${collectionTimeDisplay}\nAddress: ${COLLECTION_ADDRESS}\nwhat3words: ${COLLECTION_W3W} (${COLLECTION_W3W_URL})\nGoogle Maps: ${COLLECTION_MAPS_URL}\n\nThe what3words address takes you to the exact spot, so we suggest using it. Look for the black gate with the yellow number 32. The door is at the end of the path.\n\nPlease return the kit by ${returnDateFormatted}.\n\n${termsSummaryText}Thanks for supporting a better way to party.\n\nDo better, Do Good.\n\nCheers,\nCaro & Henry\nThe DGPB Team`;
+        receiptHtml = `<p>Hi ${firstName},</p><p>Great! Your payment of £${totalAmount} has been received.</p><p>Your booking is confirmed for <strong>${partyDateFormatted}</strong>.</p><h3>Breakdown</h3><ul><li>Party kit: £${kitCost}</li>${discountLineHtml}<li>Washing service: £${washingCost}</li><li>Delivery: FREE (collection)</li></ul><p><strong>Total: £${totalAmount}</strong></p><h3>Collection details</h3><p><strong>Date:</strong> ${collectionDateFormatted}<br><strong>Time window:</strong> ${collectionTimeDisplay}<br><strong>Address:</strong> ${COLLECTION_ADDRESS}<br><strong>what3words:</strong> <a href="${COLLECTION_W3W_URL}">${COLLECTION_W3W}</a><br><strong>Google Maps:</strong> <a href="${COLLECTION_MAPS_URL}">Open the pin in Maps</a></p><p>The what3words address takes you to the exact spot, so we suggest using it. Look for the black gate with the yellow number 32. The door is at the end of the path.</p><p>Please return the kit by <strong>${returnDateFormatted}</strong>.</p>${termsSummaryHtml}<p>Thanks for supporting a better way to party.</p><p>Do better, Do Good.</p><p>Cheers,<br>Caro & Henry<br>The DGPB Team</p>`;
       } else {
         const deliveryTimeDisplay = getTimeWindowDisplay(bookingDeliveryTime);
         const totalAmount = (paymentIntent.amount / 100).toFixed(2);
@@ -1046,14 +1078,19 @@ app.post('/api/stripe-webhook', async (req, res) => {
         html: receiptHtml
       };
 
-      await transporter.sendMail(mailOptions);
-      console.log(`Payment receipt sent to ${customerEmail}`);
+      try {
+        await transporter.sendMail(mailOptions);
+        console.log(`Payment receipt sent to ${customerEmail}`);
+      } catch (mailError) {
+        console.error('Receipt email failed:', mailError);
+        await notifyOwners('⚠️ Receipt email FAILED', `The booking is saved but the receipt email failed for ${firstName} ${lastName} (${customerEmail}, party ${partyDateFormatted}). Please email them the details by hand.`);
+      }
 
     } catch (error) {
       console.error('Error processing payment confirmation:', error);
       if (!bookingSaved) {
         // The customer has paid but there is no booking row. Ask Stripe to retry and raise the alarm.
-        await notifySlack(`🚨 PAYMENT TAKEN BUT BOOKING NOT SAVED. Payment ${paymentIntent.id}: ${firstName} ${lastName}, ${customerEmail}, party date ${partyDate}. Stripe will retry automatically; check the Bookings sheet and add it by hand if it does not appear.`);
+        await notifyOwners('🚨 PAYMENT TAKEN BUT BOOKING NOT SAVED', `Payment ${paymentIntent.id}: ${firstName} ${lastName}, ${customerEmail}, party date ${partyDate}. Stripe will retry automatically; check the Bookings sheet and add it by hand if it does not appear.`);
         return res.status(500).json({ error: 'Booking could not be saved' });
       }
       // The booking is saved, so a failed email or usage count must not make Stripe retry
