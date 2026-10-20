@@ -4,6 +4,7 @@ const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const nodemailer = require('nodemailer');
 const cron = require('node-cron');
+const emailTools = require('./emails');
 require('dotenv').config();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
@@ -82,129 +83,6 @@ const transporter = nodemailer.createTransport({
     user: process.env.ZOHO_EMAIL,
     pass: process.env.ZOHO_PASSWORD
   }
-});
-
-// Get today's enquiries from the sheet
-async function getTodaysEnquiries() {
-  try {
-    const rows = await getSheetData();
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-    
-    const todaysEnquiries = [];
-    
-    for (const row of rows) {
-      const rawData = row._rawData;
-      const timestamp = rawData[0]; // Timestamp column
-      
-      if (timestamp && timestamp.startsWith(today)) {
-        todaysEnquiries.push({
-          timestamp: rawData[0],
-          partyDate: rawData[1],
-          guests: rawData[2],
-          postcode: rawData[3],
-          email: rawData[4],
-          notes: rawData[5]
-        });
-      }
-    }
-    
-    return todaysEnquiries;
-  } catch (error) {
-    console.error('Error getting today\'s enquiries:', error);
-    return [];
-  }
-}
-
-// Send daily digest email
-async function sendDailyDigest() {
-  try {
-    const enquiries = await getTodaysEnquiries();
-    
-    // Only send if there are enquiries
-    if (enquiries.length === 0) {
-      console.log('No enquiries today, skipping email');
-      return;
-    }
-    
-    const enquiryRows = enquiries.map((e, idx) => `
-      <tr>
-        <td style="padding: 12px; border-bottom: 1px solid #eee;">${idx + 1}</td>
-        <td style="padding: 12px; border-bottom: 1px solid #eee;">${e.partyDate}</td>
-        <td style="padding: 12px; border-bottom: 1px solid #eee;">${e.guests}</td>
-        <td style="padding: 12px; border-bottom: 1px solid #eee;">${e.postcode}</td>
-        <td style="padding: 12px; border-bottom: 1px solid #eee;"><a href="mailto:${e.email}">${e.email}</a></td>
-        <td style="padding: 12px; border-bottom: 1px solid #eee;">${e.notes || '–'}</td>
-      </tr>
-    `).join('');
-    
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            h1 { color: #2F8B6E; border-bottom: 3px solid #2F8B6E; padding-bottom: 10px; }
-            .summary { background: #f5f1e8; padding: 15px; border-radius: 8px; margin: 20px 0; }
-            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-            th { background: #2F8B6E; color: white; padding: 12px; text-align: left; font-weight: 600; }
-            .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 0.9rem; color: #666; }
-            .link-btn { display: inline-block; background: #2F8B6E; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-top: 15px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <h1>📅 Do Good Party Box – Daily Enquiries</h1>
-            
-            <div class="summary">
-              <strong>${enquiries.length} unavailable date enquir${enquiries.length === 1 ? 'y' : 'ies'}</strong> came in today.
-            </div>
-            
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Party Date</th>
-                  <th>Guests</th>
-                  <th>Postcode</th>
-                  <th>Email</th>
-                  <th>Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${enquiryRows}
-              </tbody>
-            </table>
-            
-            <a href="https://docs.google.com/spreadsheets/d/${process.env.SHEET_ID}/edit#gid=0" class="link-btn">View Full Sheet</a>
-            
-            <div class="footer">
-              <p>This is an automated daily digest from Do Good Party Box. No reply needed.</p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
-    
-    await transporter.sendMail({
-      from: process.env.GMAIL_EMAIL,
-      to: process.env.DIGEST_EMAIL,
-      subject: `Do Good Party Box – ${enquiries.length} Enquir${enquiries.length === 1 ? 'y' : 'ies'} Today`,
-      html: htmlContent
-    });
-    
-    console.log(`Daily digest sent to ${process.env.DIGEST_EMAIL} with ${enquiries.length} enquiries`);
-  } catch (error) {
-    console.error('Error sending daily digest:', error);
-  }
-}
-
-// Schedule daily digest for 8:30 AM every day
-// Format: minute hour day month day-of-week
-cron.schedule('30 8 * * *', () => {
-  console.log('Running daily digest at 8:30 AM');
-  sendDailyDigest();
 });
 
 // Holidays and other closures live in a "Blocked Dates" tab of the same Google Sheet.
@@ -481,68 +359,14 @@ app.post('/api/unavailable-enquiry', async (req, res) => {
       }
     ]);
     
-    // Send Slack notification if webhook is configured
-    if (process.env.SLACK_WEBHOOK_URL) {
-      const slackMessage = {
-        text: '📅 Unavailable Date Enquiry',
-        blocks: [
-          {
-            type: 'header',
-            text: {
-              type: 'plain_text',
-              text: '📅 Unavailable Date Enquiry'
-            }
-          },
-          {
-            type: 'section',
-            fields: [
-              {
-                type: 'mrkdwn',
-                text: `*Name:*\n${firstName} ${lastName}`
-              },
-              {
-                type: 'mrkdwn',
-                text: `*Party Date:*\n${partyDate}`
-              },
-              {
-                type: 'mrkdwn',
-                text: `*Guests:*\n${guests}`
-              },
-              {
-                type: 'mrkdwn',
-                text: `*Postcode:*\n${postcode}`
-              },
-              {
-                type: 'mrkdwn',
-                text: `*Email:*\n${email}`
-              }
-            ]
-          }
-        ]
-      };
-      
-      if (notes) {
-        slackMessage.blocks.push({
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `*Notes:*\n${notes}`
-          }
-        });
-      }
-      
-      try {
-        await fetch(process.env.SLACK_WEBHOOK_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(slackMessage)
-        });
-      } catch (slackError) {
-        console.error('Error sending Slack notification:', slackError);
-        // Don't fail the enquiry submission if Slack fails
-      }
-    }
-    
+    // Tell us straight away by email (and Slack if it is set up). Replying to the alert replies to the customer.
+    const enquiryName = `${firstName} ${lastName}`;
+    await notifyOwners(
+      `📅 Date enquiry: ${enquiryName}, ${emailTools.longDate(partyDate)}`,
+      `Someone asked about a date that is not available.\n\nName: ${enquiryName}\nEmail: ${email}\nParty date: ${emailTools.longDate(partyDate)}\nGuests: ${guests}\nPostcode: ${postcode}\nNotes: ${notes || 'None'}\nOK to email about offers: ${marketingConsent === true ? 'Yes' : 'No'}\n\nReply to this email to answer them directly.`,
+      { replyTo: email }
+    );
+
     res.json({ success: true });
   } catch (error) {
     console.error('Error processing enquiry:', error);
@@ -616,6 +440,22 @@ const REPLACEMENT_CHARGE_PER_ITEM = 1;
 const WASHING_PRICE = 5;
 const MIN_KIT_PRICE_AFTER_DISCOUNT = 1; // a discount can never take the kit below this (Stripe's minimum charge is 30p)
 
+// Customer emails (confirmation, reminders, feedback, cancellation) are built in emails.js from these figures.
+// FEEDBACK_URL (optional Fly secret) adds a "Tell us how it went" button to the feedback email.
+const emails = emailTools.create({
+  kitPrice: KIT_PRICE,
+  washingPrice: WASHING_PRICE,
+  lateFee: LATE_FEE_PER_DAY,
+  replacementCharge: REPLACEMENT_CHARGE_PER_ITEM,
+  termsVersion: TERMS_VERSION,
+  collectionAddress: COLLECTION_ADDRESS,
+  w3w: COLLECTION_W3W,
+  w3wUrl: COLLECTION_W3W_URL,
+  mapsUrl: COLLECTION_MAPS_URL,
+  contactEmail: 'hello@dogoodpartybox.co.uk',
+  feedbackUrl: process.env.FEEDBACK_URL || ''
+});
+
 function roundMoney(n) {
   return Math.round(n * 100) / 100;
 }
@@ -661,13 +501,15 @@ async function getSheetsDoc() {
 const ALERT_EMAIL = process.env.ALERT_EMAIL || 'dogoodpartybox@gmail.com';
 
 // Tell the owners something happened: an email to ALERT_EMAIL, plus Slack if it is set up. Never throws.
-async function notifyOwners(subject, text) {
+// Pass { replyTo } so that replying to the alert goes straight to the customer.
+async function notifyOwners(subject, text, options = {}) {
   try {
     await transporter.sendMail({
       from: process.env.ZOHO_EMAIL,
       to: ALERT_EMAIL,
       subject,
-      text
+      text,
+      ...(options.replyTo ? { replyTo: options.replyTo } : {})
     });
   } catch (error) {
     console.error('Error sending alert email:', error);
@@ -823,6 +665,198 @@ app.post('/api/validate-discount', async (req, res) => {
   }
 });
 
+// ===== BOOKINGS SHEET: EXTRA COLUMNS =====
+// New columns only ever go on the far right, because availability reads the older columns by position.
+// They are added to the Bookings tab automatically (header names below) if they are missing.
+const BOOKING_STATUS_HEADER = 'Status (Confirmed/Pending/Cancelled)';
+const BOOKING_EXTRA_HEADERS = [
+  'Phone', 'Guests', 'Delivery Address', 'Delivery Notes',
+  'Pre-party Reminder Sent', 'Return Reminder Sent', 'Feedback Request Sent', 'Cancellation Email Sent'
+];
+
+let ensureChain = Promise.resolve();
+async function addMissingBookingColumns(sheet) {
+  await sheet.loadHeaderRow();
+  const missing = BOOKING_EXTRA_HEADERS.filter(h => !sheet.headerValues.includes(h));
+  if (!missing.length) return;
+  const newHeaders = [...sheet.headerValues, ...missing];
+  if (newHeaders.length > sheet.columnCount) {
+    await sheet.resize({ rowCount: sheet.rowCount, columnCount: newHeaders.length });
+  }
+  await sheet.setHeaderRow(newHeaders);
+  console.log('Added Bookings columns: ' + missing.join(', '));
+}
+// One at a time, so two bookings arriving together cannot add the same column twice
+function ensureBookingColumns(sheet) {
+  const run = ensureChain.then(() => addMissingBookingColumns(sheet));
+  ensureChain = run.catch(() => {});
+  return run;
+}
+// A problem here must never stop a paid booking being saved
+async function ensureBookingColumnsSafe(sheet) {
+  try {
+    await ensureBookingColumns(sheet);
+  } catch (error) {
+    console.error('Could not add the new Bookings columns:', error);
+    await notifyOwners('⚠️ Bookings sheet needs new columns', `The site could not add these columns to the right of the Bookings tab by itself: ${BOOKING_EXTRA_HEADERS.join(', ')}. Please add them by hand (exact names, at the far right). Bookings are still being saved.\n\nError: ${error.message}`);
+  }
+}
+
+function cellValue(sheet, row, name) {
+  const i = sheet.headerValues.indexOf(name);
+  return i === -1 ? '' : String(row._rawData[i] === undefined ? '' : row._rawData[i]).trim();
+}
+async function setCellValues(row, values) {
+  for (const [name, value] of Object.entries(values)) row.set(name, value);
+  await row.save();
+}
+
+// ===== DAILY CUSTOMER EMAILS (reminder before the party, reminder before the return, feedback request) =====
+const PARTY_REMINDER_DAYS_BEFORE = 2;   // sent when the handover (collection or delivery) is 1 to 2 days away
+const FEEDBACK_DAYS_AFTER_RETURN = 2;   // sent 2 to 14 days after the return date
+
+function londonDateString(now) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+}
+// DD/MM/YYYY, matching the other dates in the sheet
+function ukDateLabel(now) {
+  return londonDateString(now).split('-').reverse().join('/');
+}
+function dayNumber(value) {
+  const d = emailTools.parseDay(value);
+  return d ? Math.round(d.getTime() / 86400000) : null;
+}
+
+async function sendCustomerEmail(to, mail) {
+  await transporter.sendMail({ from: process.env.ZOHO_EMAIL, to, subject: mail.subject, text: mail.text, html: mail.html });
+}
+
+async function runDailyEmails(now = new Date()) {
+  const result = { partyReminders: 0, returnReminders: 0, feedbackRequests: 0 };
+  const doc = await getSheetsDoc();
+  const sheet = doc.sheetsByTitle['Bookings'];
+  if (!sheet) return result;
+  await ensureBookingColumnsSafe(sheet);
+  const rows = await sheet.getRows();
+  const todayStamp = londonDateString(now);
+  const today = dayNumber(todayStamp);
+
+  for (const row of rows) {
+    const get = (name) => cellValue(sheet, row, name);
+    if (get(BOOKING_STATUS_HEADER) !== 'Confirmed') continue;
+    const to = get('Customer Email');
+    if (!to) continue;
+
+    const delivery = get('Delivery Method (Collect/Deliver)') === 'Delivery' ? 'we-deliver' : 'collect';
+    const handoverDate = delivery === 'collect' ? get('Collection Date') : get('Delivery Date');
+    const returnDate = get('Expected Return Date');
+    const data = {
+      firstName: get('First Name') || 'there',
+      guests: get('Guests'),
+      kit: get('Pastel Booked') ? 'pastel' : (get('Bright Booked') ? 'bright' : ''),
+      partyDate: get('Party Date'),
+      delivery,
+      handoverDate,
+      handoverWindow: delivery === 'collect' ? get('Collection Time') : get('Delivery Time'),
+      returnDate,
+      washing: get('Washing Service (Y/N)') === 'Yes' ? 'we-wash' : 'rinse-yourself',
+      deliveryAddress: get('Delivery Address'),
+      phone: get('Phone')
+    };
+
+    const send = async (flag, mail, label, counter) => {
+      if (!sheet.headerValues.includes(flag)) return; // never resend every day because a column is missing
+      try {
+        await sendCustomerEmail(to, mail);
+        await setCellValues(row, { [flag]: ukDateLabel(now) });
+        result[counter]++;
+        console.log(`${label} sent to ${to}`);
+      } catch (error) {
+        console.error(`${label} failed for ${to}:`, error);
+        await notifyOwners(`⚠️ ${label} FAILED`, `Could not send the ${label.toLowerCase()} to ${data.firstName} (${to}, party ${data.partyDate}). We will try again tomorrow. Error: ${error.message}`);
+      }
+    };
+
+    // 1. A couple of days before the collection or delivery. Skipped for bookings made in the last 20 hours (they have just had their confirmation).
+    const untilHandover = dayNumber(handoverDate) === null ? null : dayNumber(handoverDate) - today;
+    const bookedAt = Number((get('Booking ID').match(/^BK-(\d+)$/) || [])[1]);
+    const justBooked = bookedAt && (now.getTime() - bookedAt) < 20 * 3600 * 1000;
+    if (!get('Pre-party Reminder Sent') && untilHandover !== null && untilHandover >= 1 && untilHandover <= PARTY_REMINDER_DAYS_BEFORE && !justBooked) {
+      await send('Pre-party Reminder Sent', emails.partyReminder(data), 'Party reminder', 'partyReminders');
+    }
+
+    // 2. The day before the kit is due back
+    const untilReturn = dayNumber(returnDate) === null ? null : dayNumber(returnDate) - today;
+    if (!get('Return Reminder Sent') && untilReturn !== null && untilReturn >= 0 && untilReturn <= 1) {
+      await send('Return Reminder Sent', emails.returnReminder(data), 'Return reminder', 'returnReminders');
+    }
+
+    // 3. A couple of days after the return date, once
+    if (!get('Feedback Request Sent') && untilReturn !== null && -untilReturn >= FEEDBACK_DAYS_AFTER_RETURN && -untilReturn <= 14) {
+      await send('Feedback Request Sent', emails.feedbackRequest(data), 'Feedback request', 'feedbackRequests');
+    }
+  }
+  return result;
+}
+
+// 9am UK time every day. The server stays running (min_machines_running = 1 in fly.toml).
+cron.schedule('0 9 * * *', () => {
+  console.log('Running daily customer emails');
+  runDailyEmails().catch(async (error) => {
+    console.error('Daily customer emails failed:', error);
+    await notifyOwners('⚠️ Daily reminder emails FAILED', `The daily reminder run could not complete: ${error.message}`);
+  });
+}, { timezone: 'Europe/London' });
+
+// Add the new Bookings columns shortly after start-up, so they are there before the first booking
+setTimeout(async () => {
+  try {
+    const doc = await getSheetsDoc();
+    const sheet = doc.sheetsByTitle['Bookings'];
+    if (sheet) await ensureBookingColumnsSafe(sheet);
+  } catch (error) {
+    console.error('Start-up column check failed:', error.message);
+  }
+}, 3000).unref();
+
+// ===== REFUNDS: cancellation email =====
+// When a booking is refunded in full in Stripe, mark it Cancelled (which frees the dates) and tell the customer.
+async function handleChargeRefunded(charge) {
+  const doc = await getSheetsDoc();
+  const sheet = doc.sheetsByTitle['Bookings'];
+  if (!sheet) return;
+  await ensureBookingColumnsSafe(sheet);
+  const rows = await sheet.getRows();
+  const row = rows.find(r => cellValue(sheet, r, 'Payment Intent ID') === charge.payment_intent);
+  if (!row) {
+    console.log(`Refund on ${charge.payment_intent} has no booking row, ignoring`);
+    return;
+  }
+  const get = (name) => cellValue(sheet, row, name);
+  const name = `${get('First Name')} ${get('Last Name')}`.trim();
+  const refunded = (charge.amount_refunded || 0) / 100;
+  const fullRefund = charge.refunded === true || (charge.amount_refunded || 0) >= (charge.amount || Infinity);
+
+  if (!fullRefund) {
+    await notifyOwners(`ℹ️ Partial refund: ${name}`, `A partial refund of £${refunded.toFixed(2)} was made on ${name}'s booking for ${get('Party Date')}. The booking stays Confirmed and no email was sent to the customer.`);
+    return;
+  }
+  if (get(BOOKING_STATUS_HEADER) !== 'Cancelled') {
+    await setCellValues(row, { [BOOKING_STATUS_HEADER]: 'Cancelled' });
+  }
+  if (get('Cancellation Email Sent') || !sheet.headerValues.includes('Cancellation Email Sent')) return;
+  const mail = emails.cancellation({ firstName: get('First Name') || 'there', partyDate: get('Party Date'), refundAmount: refunded });
+  try {
+    await sendCustomerEmail(get('Customer Email'), mail);
+    await setCellValues(row, { 'Cancellation Email Sent': ukDateLabel(new Date()) });
+  } catch (error) {
+    console.error('Cancellation email failed:', error);
+    await notifyOwners('⚠️ Cancellation email FAILED', `${name} (${get('Customer Email')}) was refunded £${refunded.toFixed(2)} but the cancellation email could not be sent. Please email them by hand.\n\n${mail.text}`);
+    return;
+  }
+  await notifyOwners(`Booking cancelled: ${name}, ${get('Party Date')}`, `${name}'s booking for ${get('Party Date')} was refunded in full (£${refunded.toFixed(2)}). The sheet now says Cancelled, so the dates are free again, and the customer has been sent a cancellation email.`);
+}
+
 // Create payment intent for Stripe
 // The price is worked out here from the booking details. Any amount sent by the browser is ignored.
 app.post('/api/create-payment-intent', async (req, res) => {
@@ -845,6 +879,9 @@ app.post('/api/create-payment-intent', async (req, res) => {
       marketingConsent
     } = req.body;
     const colour = req.body.colour || 'no-preference';
+    const phone = String(req.body.phone || '').trim();
+    const deliveryAddress = String(req.body.deliveryAddress || '').trim().slice(0, 200);
+    const deliveryNotes = String(req.body.deliveryNotes || '').trim().slice(0, 200);
 
     if (!firstName || !lastName || !customerEmail || !partyDate || !postcode || !guests) {
       return res.status(400).json({ error: 'Please fill in all required fields' });
@@ -854,6 +891,9 @@ app.post('/api/create-payment-intent', async (req, res) => {
     }
     if (termsAccepted !== true) {
       return res.status(400).json({ error: 'Please read and accept the hire terms to continue' });
+    }
+    if (!/^[0-9+()\-\s]{10,20}$/.test(phone) || phone.replace(/\D/g, '').length < 10) {
+      return res.status(400).json({ error: 'Please enter a phone number we can reach you on' });
     }
     if (!['collect', 'we-deliver'].includes(delivery)) {
       return res.status(400).json({ error: 'Please choose delivery or collection' });
@@ -869,6 +909,9 @@ app.post('/api/create-payment-intent', async (req, res) => {
     }
     if (delivery === 'we-deliver' && (!deliveryDate || !deliveryTime)) {
       return res.status(400).json({ error: 'Please select a delivery date and time window' });
+    }
+    if (delivery === 'we-deliver' && deliveryAddress.length < 5) {
+      return res.status(400).json({ error: 'Please enter the address we should deliver to' });
     }
 
     const partyDay = new Date(partyDate);
@@ -942,6 +985,9 @@ app.post('/api/create-payment-intent', async (req, res) => {
         collectionTime,
         deliveryDate,
         deliveryTime,
+        phone,
+        deliveryAddress: delivery === 'we-deliver' ? deliveryAddress : '',
+        deliveryNotes: delivery === 'we-deliver' ? deliveryNotes : '',
         discountCode: appliedCode,
         discountAmount: discountAmount.toFixed(2),
         termsAccepted: 'yes',
@@ -982,15 +1028,7 @@ app.post('/api/stripe-webhook', async (req, res) => {
     return res.status(400).json({ error: `Webhook Error: ${error.message}` });
   }
 
-  // Helper function to convert time window codes to readable format
-  function getTimeWindowDisplay(windowCode) {
-    const windowMap = {
-      'morning': 'Morning (8am–12pm)',
-      'afternoon': 'Afternoon (12pm–5pm)',
-      'evening': 'Evening (5pm–8pm)'
-    };
-    return windowMap[windowCode] || windowCode;
-  }
+  const getTimeWindowDisplay = emailTools.windowLabel;
 
   // Handle payment success
   if (event.type === 'payment_intent.succeeded') {
@@ -1011,6 +1049,9 @@ app.post('/api/stripe-webhook', async (req, res) => {
       collectionTime,
       deliveryDate,
       deliveryTime,
+      phone,
+      deliveryAddress,
+      deliveryNotes,
       discountCode,
       discountAmount,
       kit,
@@ -1036,6 +1077,7 @@ app.post('/api/stripe-webhook', async (req, res) => {
       if (!bookingsSheet) {
         throw new Error('Bookings sheet not found');
       }
+      await ensureBookingColumns(bookingsSheet);
 
       // Stripe can send the same event more than once, so skip payments already recorded
       const existingRows = await bookingsSheet.getRows();
@@ -1074,8 +1116,9 @@ app.post('/api/stripe-webhook', async (req, res) => {
       const deliveryDateFormatted = bookingDeliveryDate ? new Date(bookingDeliveryDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '/') : '';
 
       // Add row to Bookings sheet with all fields
+      const bookingId = `BK-${Date.now()}`;
       await bookingsSheet.addRows([{
-        'Booking ID': `BK-${Date.now()}`,
+        'Booking ID': bookingId,
         'Pastel Booked': pastelBooked,
         'Bright Booked': brightBooked,
         'First Name': firstName || 'Not provided',
@@ -1095,7 +1138,11 @@ app.post('/api/stripe-webhook', async (req, res) => {
         'Discount Code': discountCode || '',
         'Discount Amount (£)': discountAmount || 0,
         'Payment Intent ID': paymentIntent.id,
-        'Marketing Consent': marketingConsent === 'yes' ? 'Yes' : 'No'
+        'Marketing Consent': marketingConsent === 'yes' ? 'Yes' : 'No',
+        'Phone': phone || '',
+        'Guests': guests || '',
+        'Delivery Address': deliveryAddress || '',
+        'Delivery Notes': deliveryNotes || ''
       }]);
 
       bookingSaved = true;
@@ -1104,9 +1151,13 @@ app.post('/api/stripe-webhook', async (req, res) => {
       // Tell us straight away (before the customer email, so a failed email cannot hide a booking)
       const alertTotal = (paymentIntent.amount / 100).toFixed(2);
       const alertHandover = delivery === 'collect'
-        ? `Collection ${collectionDateFormatted}, ${getTimeWindowDisplay(bookingCollectionTime)}`
-        : `Delivery ${deliveryDateFormatted}, ${getTimeWindowDisplay(bookingDeliveryTime)}`;
-      await notifyOwners(`🎉 New booking: ${firstName} ${lastName}, ${partyDateFormatted}`, `Customer: ${firstName} ${lastName}, ${customerEmail}\nParty date: ${partyDateFormatted} (${guests || '?'} guests, ${assignedKit} kit)\n${alertHandover}\nReturn by: ${returnDateFormatted}\nTotal paid: £${alertTotal}${washing === 'we-wash' ? ' (incl. washing)' : ''}${discountCode ? ` (code ${discountCode})` : ''}`);
+        ? `Collection: ${emailTools.longDate(collectionDateFormatted)}, ${getTimeWindowDisplay(bookingCollectionTime)}`
+        : `Delivery: ${emailTools.longDate(deliveryDateFormatted)}, ${getTimeWindowDisplay(bookingDeliveryTime)}\nDeliver to: ${deliveryAddress || 'not given'}, ${postcode}${deliveryNotes ? `\nAddress notes: ${deliveryNotes}` : ''}`;
+      await notifyOwners(
+        `🎉 New booking: ${firstName} ${lastName}, ${partyDateFormatted}`,
+        `Customer: ${firstName} ${lastName}\nEmail: ${customerEmail}\nPhone: ${phone || 'not given'}\nParty date: ${emailTools.longDate(partyDateFormatted)} (${guests || '?'} guests, ${assignedKit} kit)\n${alertHandover}\nReturn by: ${emailTools.longDate(returnDateFormatted)}\nWashing: ${washing === 'we-wash' ? 'We wash it' : 'Customer washes it'}\nTotal paid: £${alertTotal}${discountCode ? ` (code ${discountCode})` : ''}\nBooking ID: ${bookingId}\n\nReply to this email to write to the customer.`,
+        { replyTo: customerEmail }
+      );
 
       if (discountCode) {
         try {
@@ -1116,49 +1167,38 @@ app.post('/api/stripe-webhook', async (req, res) => {
         }
       }
 
-      // Send payment receipt email (detailed version based on delivery method)
-      const discountValue = parseFloat(discountAmount || '0') || 0;
-      const discountLineText = discountValue > 0 ? `- Discount (${discountCode}): -£${discountValue.toFixed(2)}\n` : '';
-      const discountLineHtml = discountValue > 0 ? `<li>Discount (${discountCode}): -£${discountValue.toFixed(2)}</li>` : '';
-
-      // Short version of the hire terms for the receipt (full terms are on the website)
-      const handoverWord = delivery === 'collect' ? 'collection' : 'delivery';
-      const termsSummaryText = `Hire terms in brief:\n- You have one day's grace after the return date. After that a late fee of £${LATE_FEE_PER_DAY} per day applies.\n- Lost or broken plates, bowls, cups and cutlery are charged at £${REPLACEMENT_CHARGE_PER_ITEM} per item.\n- You can cancel for a full refund up to 1 day before your ${handoverWord} date. After that the full booking amount is kept.\nFull terms: https://dogoodpartybox.co.uk/#terms\n\n`;
-      const termsSummaryHtml = `<h3>Hire terms in brief</h3><ul><li>You have one day's grace after the return date. After that a late fee of £${LATE_FEE_PER_DAY} per day applies.</li><li>Lost or broken plates, bowls, cups and cutlery are charged at £${REPLACEMENT_CHARGE_PER_ITEM} per item.</li><li>You can cancel for a full refund up to 1 day before your ${handoverWord} date. After that the full booking amount is kept.</li></ul><p><a href="https://dogoodpartybox.co.uk/#terms">Read the full hire terms</a></p>`;
-
-      let receiptText, receiptHtml;
-
-      if (delivery === 'collect') {
-        const collectionTimeDisplay = getTimeWindowDisplay(bookingCollectionTime);
-        const totalAmount = (paymentIntent.amount / 100).toFixed(2);
-        const washingCost = washing === 'we-wash' ? 5 : 0;
-        const kitCost = 25;
-        receiptText = `Hi ${firstName},\n\nGreat! Your payment of £${totalAmount} has been received.\n\nYour booking is confirmed for ${partyDateFormatted}.\n\nBreakdown:\n- Party kit: £${kitCost}\n${discountLineText}- Washing service: £${washingCost}\n- Delivery: FREE (collection)\nTotal: £${totalAmount}\n\nCollection details:\nDate: ${collectionDateFormatted}\nTime window: ${collectionTimeDisplay}\nAddress: ${COLLECTION_ADDRESS}\nwhat3words: ${COLLECTION_W3W} (${COLLECTION_W3W_URL})\nGoogle Maps: ${COLLECTION_MAPS_URL}\n\nThe what3words address takes you to the exact spot, so we suggest using it. Look for the black gate with the yellow number 32. The door is at the end of the path.\n\nPlease return the kit by ${returnDateFormatted}.\n\n${termsSummaryText}Thanks for supporting a better way to party.\n\nDo better, Do Good.\n\nCheers,\nCaro & Henry\nThe DGPB Team`;
-        receiptHtml = `<p>Hi ${firstName},</p><p>Great! Your payment of £${totalAmount} has been received.</p><p>Your booking is confirmed for <strong>${partyDateFormatted}</strong>.</p><h3>Breakdown</h3><ul><li>Party kit: £${kitCost}</li>${discountLineHtml}<li>Washing service: £${washingCost}</li><li>Delivery: FREE (collection)</li></ul><p><strong>Total: £${totalAmount}</strong></p><h3>Collection details</h3><p><strong>Date:</strong> ${collectionDateFormatted}<br><strong>Time window:</strong> ${collectionTimeDisplay}<br><strong>Address:</strong> ${COLLECTION_ADDRESS}<br><strong>what3words:</strong> <a href="${COLLECTION_W3W_URL}">${COLLECTION_W3W}</a><br><strong>Google Maps:</strong> <a href="${COLLECTION_MAPS_URL}">Open the pin in Maps</a></p><p>The what3words address takes you to the exact spot, so we suggest using it. Look for the black gate with the yellow number 32. The door is at the end of the path.</p><p>Please return the kit by <strong>${returnDateFormatted}</strong>.</p>${termsSummaryHtml}<p>Thanks for supporting a better way to party.</p><p>Do better, Do Good.</p><p>Cheers,<br>Caro & Henry<br>The DGPB Team</p>`;
-      } else {
-        const deliveryTimeDisplay = getTimeWindowDisplay(bookingDeliveryTime);
-        const totalAmount = (paymentIntent.amount / 100).toFixed(2);
-        const washingCost = washing === 'we-wash' ? 5 : 0;
-        const kitCost = 25;
-        const deliveryFee = deliveryCost || 0;
-        receiptText = `Hi ${firstName},\n\nGreat! Your payment of £${totalAmount} has been received.\n\nYour booking is confirmed for ${partyDateFormatted}.\n\nBreakdown:\n- Party kit: £${kitCost}\n${discountLineText}- Washing service: £${washingCost}\n- Delivery: £${deliveryFee}\nTotal: £${totalAmount}\n\nDelivery details:\nPreferred date: ${deliveryDateFormatted}\nPreferred window: ${deliveryTimeDisplay}\n\nWe'll contact you to confirm the exact time within your preferred window.\n\nPlease return the kit by ${returnDateFormatted} and we'll collect it from you.\n\n${termsSummaryText}Thanks for supporting a better way to party.\n\nDo better, Do Good.\n\nCheers,\nCaro & Henry\nThe DGPB Team`;
-        receiptHtml = `<p>Hi ${firstName},</p><p>Great! Your payment of £${totalAmount} has been received.</p><p>Your booking is confirmed for <strong>${partyDateFormatted}</strong>.</p><h3>Breakdown</h3><ul><li>Party kit: £${kitCost}</li>${discountLineHtml}<li>Washing service: £${washingCost}</li><li>Delivery: £${deliveryFee}</li></ul><p><strong>Total: £${totalAmount}</strong></p><h3>Delivery details</h3><p><strong>Preferred date:</strong> ${deliveryDateFormatted}<br><strong>Preferred window:</strong> ${deliveryTimeDisplay}</p><p>We'll contact you to confirm the exact time within your preferred window.</p><p>Please return the kit by <strong>${returnDateFormatted}</strong> and we'll collect it from you.</p>${termsSummaryHtml}<p>Thanks for supporting a better way to party.</p><p>Do better, Do Good.</p><p>Cheers,<br>Caro & Henry<br>The DGPB Team</p>`;
-      }
-
-      const mailOptions = {
-        from: process.env.ZOHO_EMAIL,
-        to: customerEmail,
-        subject: 'Your Do Good Party Box booking is confirmed – payment received',
-        text: receiptText,
-        html: receiptHtml
-      };
+      // Confirmation email for the customer (collection or delivery version), built in emails.js
+      const confirmation = emails.bookingConfirmation({
+        firstName,
+        guests,
+        kit: assignedKit,
+        partyDate,
+        delivery,
+        handoverDate: delivery === 'collect' ? collectionDate : deliveryDate,
+        handoverWindow: delivery === 'collect' ? collectionTime : deliveryTime,
+        returnDate: returnDateFormatted,
+        washing,
+        discountCode,
+        discountAmount: parseFloat(discountAmount || '0') || 0,
+        deliveryFee: Number(deliveryCost) || 0,
+        total: paymentIntent.amount / 100,
+        deliveryAddress,
+        postcode,
+        phone
+      });
 
       try {
-        await transporter.sendMail(mailOptions);
+        await transporter.sendMail({
+          from: process.env.ZOHO_EMAIL,
+          to: customerEmail,
+          subject: confirmation.subject,
+          text: confirmation.text,
+          html: confirmation.html
+        });
         console.log(`Payment receipt sent to ${customerEmail}`);
       } catch (mailError) {
         console.error('Receipt email failed:', mailError);
-        await notifyOwners('⚠️ Receipt email FAILED', `The booking is saved but the receipt email failed for ${firstName} ${lastName} (${customerEmail}, party ${partyDateFormatted}). Please email them the details by hand.`);
+        await notifyOwners('⚠️ Receipt email FAILED', `The booking is saved but the confirmation email failed for ${firstName} ${lastName} (${customerEmail}, party ${partyDateFormatted}). Please email them the details by hand. This is the text they should have received:\n\n${confirmation.text}`, { replyTo: customerEmail });
       }
 
     } catch (error) {
@@ -1169,6 +1209,15 @@ app.post('/api/stripe-webhook', async (req, res) => {
         return res.status(500).json({ error: 'Booking could not be saved' });
       }
       // The booking is saved, so a failed email or usage count must not make Stripe retry
+    }
+  }
+
+  if (event.type === 'charge.refunded') {
+    try {
+      await handleChargeRefunded(event.data.object);
+    } catch (error) {
+      console.error('Error handling refund:', error);
+      return res.status(500).json({ error: 'Refund could not be processed' }); // Stripe will retry
     }
   }
 
@@ -1184,3 +1233,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Do Good Party Box server running on port ${PORT}`);
 });
+
+module.exports = { app, runDailyEmails };
