@@ -443,6 +443,8 @@ const MIN_KIT_PRICE_AFTER_DISCOUNT = 1; // a discount can never take the kit bel
 // Customer emails (confirmation, reminders, feedback, cancellation) are built in emails.js from these figures.
 // The feedback email links to the Google Form below. The FEEDBACK_URL Fly secret overrides it if it is ever set.
 const FEEDBACK_FORM_URL = 'https://forms.gle/hMCjTrKxmr9ge3eK6';
+// Public review page, offered to every customer in the feedback email (not only happy ones)
+const REVIEW_URL = 'https://www.facebook.com/share/1C8WcFzzYY/';
 const emails = emailTools.create({
   kitPrice: KIT_PRICE,
   washingPrice: WASHING_PRICE,
@@ -454,7 +456,8 @@ const emails = emailTools.create({
   w3wUrl: COLLECTION_W3W_URL,
   mapsUrl: COLLECTION_MAPS_URL,
   contactEmail: 'hello@dogoodpartybox.co.uk',
-  feedbackUrl: process.env.FEEDBACK_URL || FEEDBACK_FORM_URL
+  feedbackUrl: process.env.FEEDBACK_URL || FEEDBACK_FORM_URL,
+  reviewUrl: REVIEW_URL
 });
 
 function roundMoney(n) {
