@@ -18,7 +18,7 @@ Reusable kids party kit hire. Website at https://dogoodpartybox.co.uk, backend A
 - The reminders run once a day at 09:00 UK time and record what they have sent in new columns at the far right of the Bookings tab. The server adds those columns itself if they are missing.
 - We get an email at dogoodpartybox@gmail.com for each new booking, date enquiry and problem. Replying to a booking or enquiry alert goes straight to the customer.
 - The cancellation email needs the `charge.refunded` event ticked on the Stripe webhook (Developers, Webhooks).
-- Optional Fly secret `FEEDBACK_URL` adds a "Tell us how it went" button to the feedback email. Optional `ALERT_EMAIL` changes where our alerts go.
+- The feedback email has a "Tell us how it went" button linking to the Google Form (`FEEDBACK_FORM_URL` in `server.js`). The optional Fly secret `FEEDBACK_URL` overrides it. Optional `ALERT_EMAIL` changes where our alerts go.
 - `email-logo.png` in the repo root is the logo used in the emails. It must stay public.
 
 ## Making a change
@@ -33,7 +33,7 @@ Run the tests locally with `npm install` then `npm test`. They use simulated Goo
 
 Secrets are never stored in this repository.
 
-- Fly secrets (`fly secrets list -a do-good-party-box-api`): Stripe keys and webhook secret, Google service account, Zoho login, Slack webhook, sheet ID. Optional: `ALERT_EMAIL`, `FEEDBACK_URL`.
+- Fly secrets (`fly secrets list -a do-good-party-box-api`): Stripe keys and webhook secret, Google service account, Zoho login, Slack webhook, sheet ID. Optional: `ALERT_EMAIL`, `FEEDBACK_URL` (overrides the form link).
 - GitHub repository secret `FLY_API_TOKEN`: lets the deploy workflow publish to Fly.
 
 ## Things to know

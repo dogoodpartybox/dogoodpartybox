@@ -393,6 +393,7 @@ const base = (over) => Object.assign({ deliveryAddress: '', deliveryNotes: '',
   check('return tomorrow (we wash): reminder says no need to wash, mentions the late fee', sent('ret@example.com').length === 1 && /no need to wash/.test(sent('ret@example.com')[0].text) && /£5 per day/.test(sent('ret@example.com')[0].text) && /due back tomorrow/i.test(sent('ret@example.com')[0].subject), sent('ret@example.com'));
   check('return tomorrow (delivery): says we are collecting', sent('retdel@example.com').length === 1 && /collecting your party kit tomorrow/.test(sent('retdel@example.com')[0].subject), sent('retdel@example.com'));
   check('feedback request goes out 2 days after the return date and invites a reply', sent('fb@example.com').length === 1 && /How did it go, Rem/.test(sent('fb@example.com')[0].text) && /reply to this email/i.test(sent('fb@example.com')[0].text), sent('fb@example.com'));
+  check('feedback email has a button to the Google Form and still invites a reply', /forms\.gle\/hMCjTrKxmr9ge3eK6/.test(sent('fb@example.com')[0].html) && /forms\.gle\/hMCjTrKxmr9ge3eK6/.test(sent('fb@example.com')[0].text) && /Tell us how it went/.test(sent('fb@example.com')[0].html));
   check('return date long past: no feedback email', sent('old@example.com').length === 0);
   check('everything already flagged: nothing sent', sent('done@example.com').length === 0);
   const again = await server.runDailyEmails(new Date());

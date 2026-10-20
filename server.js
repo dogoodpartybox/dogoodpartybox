@@ -441,7 +441,8 @@ const WASHING_PRICE = 5;
 const MIN_KIT_PRICE_AFTER_DISCOUNT = 1; // a discount can never take the kit below this (Stripe's minimum charge is 30p)
 
 // Customer emails (confirmation, reminders, feedback, cancellation) are built in emails.js from these figures.
-// FEEDBACK_URL (optional Fly secret) adds a "Tell us how it went" button to the feedback email.
+// The feedback email links to the Google Form below. The FEEDBACK_URL Fly secret overrides it if it is ever set.
+const FEEDBACK_FORM_URL = 'https://forms.gle/hMCjTrKxmr9ge3eK6';
 const emails = emailTools.create({
   kitPrice: KIT_PRICE,
   washingPrice: WASHING_PRICE,
@@ -453,7 +454,7 @@ const emails = emailTools.create({
   w3wUrl: COLLECTION_W3W_URL,
   mapsUrl: COLLECTION_MAPS_URL,
   contactEmail: 'hello@dogoodpartybox.co.uk',
-  feedbackUrl: process.env.FEEDBACK_URL || ''
+  feedbackUrl: process.env.FEEDBACK_URL || FEEDBACK_FORM_URL
 });
 
 function roundMoney(n) {
