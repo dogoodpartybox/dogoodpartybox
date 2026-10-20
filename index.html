@@ -718,6 +718,11 @@
           <input type="email" id="email" placeholder="you@example.com">
         </div>
         <div class="form-row">
+          <label>Mobile number <span class="required">*</span></label>
+          <input type="tel" id="phone" placeholder="e.g. 07700 900123" autocomplete="tel">
+          <p style="margin:6px 0 0; font-size:0.8rem; opacity:0.7;">Only used if we need to reach you about your hire, for example on the day.</p>
+        </div>
+        <div class="form-row">
           <label>Washing service</label>
           <select id="washing">
             <option value="">Select an option</option>
@@ -759,6 +764,15 @@
             <option value="afternoon">Afternoon (12pm-5pm)</option>
             <option value="evening">Evening (5pm-8pm)</option>
           </select>
+        </div>
+        <div class="form-row" id="delivery-address-row" style="display:none;">
+          <label>Delivery address <span class="required">*</span></label>
+          <input type="text" id="delivery-address" placeholder="House number and street" autocomplete="street-address">
+          <p style="margin:6px 0 0; font-size:0.8rem; opacity:0.7;">We already have your postcode from above.</p>
+        </div>
+        <div class="form-row" id="delivery-notes-row" style="display:none;">
+          <label>Anything we should know? (optional)</label>
+          <input type="text" id="delivery-notes" placeholder="e.g. gate code, where to park, safe place to leave it">
         </div>
         <div class="form-row">
           <label>Kit colour preference</label>
@@ -842,11 +856,11 @@
       <p>Do Good Party Box is run from Colchester, Essex. We decide how your personal data is used. You can contact us at <a href="mailto:hello@dogoodpartybox.co.uk" style="color: var(--primary); text-decoration: underline;">hello@dogoodpartybox.co.uk</a>.</p>
       <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">What information we collect</h3>
       <p>If you send us an unavailable date enquiry, we collect your name, email address, postcode, number of guests and any notes you provide.</p>
-      <p>If you make a booking, we collect your name, email address, postcode, number of guests, party date, whether you want collection or delivery and the time window you choose, your kit colour and washing choices, any discount code you use, and your agreement to our hire terms.</p>
+      <p>If you make a booking, we collect your name, email address, mobile number, postcode, number of guests, party date, whether you want collection or delivery and the time window you choose, your delivery address and any delivery notes if you choose delivery, your kit colour and washing choices, any discount code you use, and your agreement to our hire terms.</p>
       <p>When you pay, your card details go straight to Stripe, our payment provider. We never see or store your full card number.</p>
       <p>We also record which party dates are searched on the website. This does not include any details that identify you.</p>
       <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">How we use your information</h3>
-      <p>We use your booking details to take your payment, reserve your kit, send your confirmation and receipt, arrange collection or delivery, and deal with returns, including any late fees or lost or damaged items. We use enquiry details to reply to you. We only send marketing emails (about future availability, reminders and offers) to people who have ticked the optional box to keep in touch, on the booking form or the enquiry form. You can unsubscribe at any time by emailing us and we will stop. We use your details to deal with your booking or enquiry whether or not you tick it.</p>
+      <p>We use your booking details to take your payment, reserve your kit, send your confirmation and receipt, send reminders about your booking (before your party and before the return date), arrange collection or delivery, deal with returns, including any late fees or lost or damaged items, and ask for your feedback once after your hire (you can tell us you would rather not be asked). We use enquiry details to reply to you. We only send marketing emails (about future availability, reminders and offers) to people who have ticked the optional box to keep in touch, on the booking form or the enquiry form. You can unsubscribe at any time by emailing us and we will stop. We use your details to deal with your booking or enquiry whether or not you tick it.</p>
       <p>We keep records of bookings and payments for our accounts and tax.</p>
       <h3 style="color: var(--dark); margin-top: 25px; margin-bottom: 15px;">Who we share it with</h3>
       <p>We do not sell your information. We use a small number of services to run the business, and they handle your data on our behalf: Stripe (payments), Google (Google Sheets, where we keep booking records), Zoho (sending our emails), Fly.io and GitHub (running this website and booking system), postcodes.io (looking up your postcode to work out delivery distance) and Slack (internal alerts to us). This website also loads fonts from Google Fonts. Some of these providers may process data outside the UK.</p>
@@ -1594,6 +1608,8 @@
     const deliveryTimeRow = document.getElementById('delivery-time-row');
     const collectionDateRow = document.getElementById('collection-date-row');
     const collectionTimeRow = document.getElementById('collection-time-row');
+    const addressRows = ['delivery-address-row', 'delivery-notes-row'].map(id => document.getElementById(id));
+    addressRows.forEach(row => { row.style.display = e.target.value === 'we-deliver' ? 'block' : 'none'; });
 
     if (e.target.value === 'we-deliver') {
       deliveryDateRow.style.display = 'block';
@@ -1624,11 +1640,26 @@
     const delivery = document.getElementById('delivery').value;
     const washing = document.getElementById('washing').value;
     const colour = document.getElementById('colour').value;
+    const phone = document.getElementById('phone').value.trim();
+    const deliveryAddress = document.getElementById('delivery-address').value.trim();
+    const deliveryNotes = document.getElementById('delivery-notes').value.trim();
     const cardError = document.getElementById('card-error');
 
     // Validation
-    if (!firstName || !lastName || !email || !postcode || !guests || !partyDate || !delivery || !washing) {
+    if (!firstName || !lastName || !email || !phone || !postcode || !guests || !partyDate || !delivery || !washing) {
       cardError.textContent = 'Please fill in all required fields';
+      cardError.style.display = 'block';
+      return;
+    }
+
+    if (phone.replace(/\D/g, '').length < 10) {
+      cardError.textContent = 'Please enter a phone number we can reach you on';
+      cardError.style.display = 'block';
+      return;
+    }
+
+    if (delivery === 'we-deliver' && deliveryAddress.length < 5) {
+      cardError.textContent = 'Please enter the address we should deliver to';
       cardError.style.display = 'block';
       return;
     }
@@ -1719,6 +1750,9 @@
           partyDate: partyDate,
           guests: guests,
           postcode: postcode,
+          phone: phone,
+          deliveryAddress: deliveryAddress,
+          deliveryNotes: deliveryNotes,
           colour: colour,
           washing: washing,
           delivery: delivery,
@@ -1772,6 +1806,11 @@
           document.getElementById('firstname').value = '';
           document.getElementById('lastname').value = '';
           document.getElementById('email').value = '';
+          document.getElementById('phone').value = '';
+          document.getElementById('delivery-address').value = '';
+          document.getElementById('delivery-notes').value = '';
+          document.getElementById('delivery-address-row').style.display = 'none';
+          document.getElementById('delivery-notes-row').style.display = 'none';
           document.getElementById('postcode').value = '';
           document.getElementById('delivery').value = '';
           document.getElementById('washing').value = '';

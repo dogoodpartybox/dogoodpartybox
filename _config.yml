@@ -1,6 +1,7 @@
 # GitHub Pages builds the website from this repository. Keep the backend and project files out of the public site.
 exclude:
   - server.js
+  - emails.js
   - package.json
   - package-lock.json
   - Dockerfile
