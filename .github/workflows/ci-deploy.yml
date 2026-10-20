@@ -1,0 +1,39 @@
+name: Test and deploy
+
+# Every pull request runs the tests. When a change to the backend is merged to main,
+# the tests run again and, if they pass, the backend is deployed to Fly.io.
+# Changes to index.html only go live through GitHub Pages, so they do not trigger a Fly deploy.
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - server.js
+      - package.json
+      - Dockerfile
+      - fly.toml
+      - .dockerignore
+      - .github/workflows/ci-deploy.yml
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - run: npm install
+      - run: npm test
+
+  deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency: fly-deploy
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
