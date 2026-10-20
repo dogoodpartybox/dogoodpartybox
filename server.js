@@ -207,6 +207,76 @@ cron.schedule('30 8 * * *', () => {
   sendDailyDigest();
 });
 
+// Holidays and other closures live in a "Blocked Dates" tab of the same Google Sheet.
+// Columns: From | To (optional, blank = one day) | Kit (Both, Pastel or Bright; blank = Both) | Reason (private note)
+// A party date is blocked when its handover window overlaps the closure: we keep parties off the
+// BLOCK_DAYS_BEFORE days before (collection or delivery) and the BLOCK_DAYS_AFTER days after (the kit's return).
+const BLOCKED_SHEET_TITLE = 'Blocked Dates';
+const BLOCKED_HEADERS = ['From', 'To', 'Kit', 'Reason'];
+const BLOCK_DAYS_BEFORE = 2;
+const BLOCK_DAYS_AFTER = 3;
+const BLOCK_CACHE_MS = (process.env.BLOCKED_CACHE_SECONDS !== undefined ? Number(process.env.BLOCKED_CACHE_SECONDS) : 30) * 1000;
+let blockedCache = { at: 0, rows: [] };
+
+// Returns the closures as [{ from: Date, to: Date, pastel: bool, bright: bool }]. Rows that cannot be read are skipped with a warning.
+async function loadBlockedRanges() {
+  if (BLOCK_CACHE_MS > 0 && Date.now() - blockedCache.at < BLOCK_CACHE_MS) return blockedCache.rows;
+  const doc = await getSheetsDoc();
+  let sheet = doc.sheetsByTitle[BLOCKED_SHEET_TITLE];
+  if (!sheet) {
+    try {
+      await doc.addSheet({ title: BLOCKED_SHEET_TITLE, headerValues: BLOCKED_HEADERS });
+    } catch (e) {
+      console.error('Could not create the Blocked Dates tab:', e.message);
+    }
+    blockedCache = { at: Date.now(), rows: [] };
+    return [];
+  }
+  const rows = await sheet.getRows();
+  const col = (name) => sheet.headerValues.indexOf(name);
+  const ranges = [];
+  rows.forEach((row, n) => {
+    const get = (name) => { const i = col(name); return i === -1 || row._rawData[i] === undefined ? '' : String(row._rawData[i]).trim(); };
+    const fromStr = get('From');
+    if (!fromStr) return; // blank row
+    const from = parseFlexibleDate(fromStr);
+    const to = get('To') ? parseFlexibleDate(get('To')) : from;
+    if (!from || !to || to < from) {
+      console.warn(`Blocked Dates row ${n + 2} ignored: could not read the dates "${fromStr}" to "${get('To')}". Use DD/MM/YYYY.`);
+      return;
+    }
+    const kit = get('Kit').toLowerCase();
+    let pastel = true, bright = true;
+    if (kit === 'pastel') bright = false;
+    else if (kit === 'bright') pastel = false;
+    else if (kit && kit !== 'both' && kit !== 'all') console.warn(`Blocked Dates row ${n + 2}: kit "${get('Kit')}" not recognised, blocking both kits.`);
+    ranges.push({ from, to, pastel, bright });
+  });
+  blockedCache = { at: Date.now(), rows: ranges };
+  return ranges;
+}
+
+// Which kits are closed off for this party date? Fails open (and logs) if the tab cannot be read, like the rest of the availability check.
+async function getBlockedKits(partyDate) {
+  try {
+    const ranges = await loadBlockedRanges();
+    const day = 86400000;
+    const windowStart = partyDate.getTime() - BLOCK_DAYS_BEFORE * day;
+    const windowEnd = partyDate.getTime() + BLOCK_DAYS_AFTER * day;
+    let pastel = false, bright = false;
+    for (const r of ranges) {
+      if (r.from.getTime() <= windowEnd && r.to.getTime() >= windowStart) {
+        if (r.pastel) pastel = true;
+        if (r.bright) bright = true;
+      }
+    }
+    return { pastel, bright };
+  } catch (error) {
+    console.error('Error reading Blocked Dates:', error.message);
+    return { pastel: false, bright: false };
+  }
+}
+
 // Check if date is available
 async function isDateAvailable(partyDateStr) {
   const partyDate = new Date(partyDateStr);
@@ -305,6 +375,11 @@ async function isDateAvailable(partyDateStr) {
       }
     }
     
+    // Holidays and other closures
+    const blocked = await getBlockedKits(partyDate);
+    if (blocked.pastel) pastelBooked = true;
+    if (blocked.bright) brightBooked = true;
+
     console.log(`\n=== FINAL RESULT ===`);
     console.log(`PastelBooked=${pastelBooked}, BrightBooked=${brightBooked}`);
     console.log(`=== AVAILABILITY CHECK END ===\n`);
