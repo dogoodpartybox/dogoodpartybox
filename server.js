@@ -445,6 +445,7 @@ const MIN_KIT_PRICE_AFTER_DISCOUNT = 1; // a discount can never take the kit bel
 const FEEDBACK_FORM_URL = 'https://forms.gle/hMCjTrKxmr9ge3eK6';
 // Public review page, offered to every customer in the feedback email (not only happy ones)
 const REVIEW_URL = 'https://www.facebook.com/share/1C8WcFzzYY/';
+const GOOGLE_REVIEW_URL = 'https://g.page/r/CQMBjABYZGloEAI/review';
 const emails = emailTools.create({
   kitPrice: KIT_PRICE,
   washingPrice: WASHING_PRICE,
@@ -457,7 +458,8 @@ const emails = emailTools.create({
   mapsUrl: COLLECTION_MAPS_URL,
   contactEmail: 'hello@dogoodpartybox.co.uk',
   feedbackUrl: process.env.FEEDBACK_URL || FEEDBACK_FORM_URL,
-  reviewUrl: REVIEW_URL
+  reviewUrl: REVIEW_URL,
+  googleReviewUrl: GOOGLE_REVIEW_URL
 });
 
 function roundMoney(n) {

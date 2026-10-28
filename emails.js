@@ -332,9 +332,11 @@ function create(config) {
     } else {
       blocks.push({ type: 'p', text: '**Just reply to this email.** It comes straight to us, and we read every one.' });
     }
-    if (config.reviewUrl) {
-      blocks.push({ type: 'p', text: "Whatever you thought, you're also welcome to leave a short public review on our Facebook page. It helps other local families find us." });
-      blocks.push({ type: 'button', label: 'Review us on Facebook', url: config.reviewUrl, secondary: true });
+    if (config.googleReviewUrl || config.reviewUrl) {
+      const where = config.googleReviewUrl && config.reviewUrl ? 'on Google or Facebook' : config.googleReviewUrl ? 'on Google' : 'on our Facebook page';
+      blocks.push({ type: 'p', text: `Whatever you thought, you're also welcome to leave a short public review ${where}. It helps other local families find us.` });
+      if (config.googleReviewUrl) blocks.push({ type: 'button', label: 'Review us on Google', url: config.googleReviewUrl, secondary: true });
+      if (config.reviewUrl) blocks.push({ type: 'button', label: 'Review us on Facebook', url: config.reviewUrl, secondary: true });
     }
     blocks.push({ type: 'p', text: "If you enjoyed it, we'd be so grateful if you told a friend or two. Word of mouth is how a small business like ours grows." });
     blocks.push({ type: 'small', text: "We'll only ask this once. If you'd rather not hear from us, reply with 'no thanks' and that's the end of it." });
