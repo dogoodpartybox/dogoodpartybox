@@ -1,0 +1,14 @@
+{
+  "name": "Do Good Party Box QR",
+  "short_name": "DGPB QR",
+  "description": "Show the Do Good Party Box website as a QR code.",
+  "start_url": "/share.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F5F1E8",
+  "theme_color": "#F5F1E8",
+  "icons": [
+    { "src": "share-icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any" },
+    { "src": "share-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

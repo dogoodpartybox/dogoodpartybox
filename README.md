@@ -9,6 +9,7 @@ Reusable kids party kit hire. Website at https://dogoodpartybox.co.uk, backend A
 | Website (`index.html`) | GitHub Pages, custom domain in `CNAME` | Merge to `main`. Pages rebuilds in a minute or two. |
 | Backend (`server.js`) | Fly.io app `do-good-party-box-api` | Merge a backend change to `main`. The `Test and deploy` workflow runs the tests, then deploys. |
 | Bookings, enquiries, discount codes, blocked dates | Google Sheet (service account) | Edited by hand in the sheet. |
+| QR share page (`share.html`) | GitHub Pages, at `/share.html`. Not linked from the site and set to `noindex`. | Merge to `main`. Add it to a phone's home screen to show the QR code quickly. The QR is static and points at `https://dogoodpartybox.co.uk`. |
 | Payments | Stripe (live keys in Fly secrets) | n/a |
 | Customer emails and alerts to us | Zoho SMTP. Wording and layout live in `emails.js`; alerts to us are plain text in `server.js` | n/a |
 

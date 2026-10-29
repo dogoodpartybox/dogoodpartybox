@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#F5F1E8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="DGPB QR">
+<title>Scan to visit the Do Good Party Box</title>
+<link rel="manifest" href="share.webmanifest">
+<link rel="icon" type="image/png" href="favicon-small.png">
+<link rel="apple-touch-icon" href="share-icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --primary:#2F8B6E; --cream:#F5F1E8; --sand:#E9E0CB; --mint:#DEECE3; --dark:#2D3E31; }
+  *{box-sizing:border-box; margin:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--cream); color:var(--dark);
+    font-family:'Fredoka','Trebuchet MS',system-ui,sans-serif;
+    display:flex; text-align:center; overflow-x:hidden;
+    padding:max(14px,env(safe-area-inset-top)) 20px max(14px,env(safe-area-inset-bottom));
+  }
+  .bg{position:fixed; inset:0; overflow:hidden; z-index:-1;}
+  .bg i{position:absolute; border-radius:50%; display:block;}
+  .bg i:first-child{width:80vmax; height:80vmax; background:var(--sand); left:-45vmax; bottom:-52vmax;}
+  .bg i:last-child{width:70vmax; height:70vmax; background:var(--mint); right:-38vmax; top:-48vmax;}
+  .stack{
+    margin:auto; display:flex; flex-direction:column; align-items:center;
+    gap:clamp(8px,2vh,22px);
+  }
+  .logo{width:min(60vw,20vh,260px); height:auto; display:block;}
+  h1{font-size:clamp(1.5rem,6.8vw,2.3rem); font-weight:700; line-height:1.1;}
+  .sub{font-size:clamp(0.95rem,4vw,1.15rem); opacity:.8; margin-top:4px;}
+  .qr{
+    width:min(76vw,38vh,400px); aspect-ratio:1; background:#fff; border-radius:22px;
+    padding:clamp(12px,3.5vw,22px); box-shadow:0 10px 30px rgba(45,62,49,.18);
+  }
+  .qr svg{width:100%; height:100%; display:block;}
+  .url{
+    display:inline-block; background:var(--primary); color:#fff; text-decoration:none;
+    font-weight:600; font-size:clamp(1.05rem,4.6vw,1.35rem); padding:12px 26px; border-radius:999px;
+  }
+  .send{
+    background:none; border:2px solid var(--primary); color:var(--primary); font:inherit; font-weight:600;
+    font-size:1rem; padding:10px 22px; border-radius:999px; cursor:pointer;
+  }
+  .send[hidden]{display:none;}
+  @media (max-height:740px){ .send{display:none !important;} }
+  @media (max-height:600px){ .sub{display:none;} }
+  @media (max-height:500px){ .logo{display:none;} }
+</style>
+</head>
+<body>
+  <div class="bg" aria-hidden="true"><i></i><i></i></div>
+  <main class="stack">
+  <img class="logo" src="Logo%20Main%20-%20Small%20-%20Colour.png" alt="Do Good Party Box" width="1438" height="1094">
+  <div>
+    <h1>Scan to take a look</h1>
+    <p class="sub">Reusable kids party kits to hire</p>
+  </div>
+  <div class="qr"><svg role="img" aria-label="QR code for dogoodpartybox.co.uk" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 29 29" class="segno"><path class="qrline" stroke="#2d3e31" d="M0 0.5h7m2 0h2m3 0h3m1 0h1m3 0h7m-29 1h1m5 0h1m2 0h1m1 0h2m2 0h3m1 0h1m2 0h1m5 0h1m-29 1h1m1 0h3m1 0h1m1 0h3m1 0h2m3 0h2m1 0h1m1 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m3 0h3m2 0h1m2 0h1m3 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m1 0h1m1 0h1m1 0h2m2 0h3m3 0h1m1 0h3m1 0h1m-29 1h1m5 0h1m1 0h2m5 0h1m1 0h3m2 0h1m5 0h1m-29 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-18 1h2m1 0h1m2 0h4m-20 1h1m2 0h1m1 0h1m1 0h2m3 0h3m2 0h1m2 0h1m1 0h2m1 0h1m-25 1h2m1 0h1m1 0h4m1 0h1m2 0h1m1 0h2m3 0h1m1 0h1m1 0h3m-28 1h1m1 0h5m2 0h1m3 0h3m1 0h1m2 0h1m1 0h1m4 0h1m-29 1h1m1 0h1m1 0h1m2 0h5m1 0h2m1 0h6m1 0h3m1 0h2m-29 1h1m2 0h2m1 0h1m1 0h2m2 0h1m4 0h1m2 0h1m2 0h1m4 0h1m-28 1h2m2 0h1m1 0h1m10 0h1m3 0h1m1 0h1m1 0h3m-28 1h1m4 0h2m2 0h1m1 0h2m1 0h3m6 0h1m3 0h1m-28 1h1m2 0h2m2 0h3m1 0h1m1 0h1m1 0h2m2 0h2m1 0h1m1 0h1m1 0h1m-28 1h3m3 0h1m3 0h3m1 0h1m3 0h4m1 0h1m-24 1h1m1 0h3m4 0h1m2 0h2m2 0h3m1 0h1m1 0h4m2 0h1m-27 1h3m1 0h2m5 0h1m2 0h1m1 0h1m1 0h1m3 0h2m2 0h1m-27 1h3m6 0h2m1 0h1m2 0h4m3 0h2m1 0h2m-29 1h2m1 0h2m1 0h1m1 0h2m3 0h1m1 0h1m1 0h1m2 0h6m1 0h2m-21 1h1m3 0h2m1 0h6m3 0h1m1 0h3m-29 1h7m2 0h2m2 0h1m1 0h2m1 0h3m1 0h1m1 0h1m3 0h1m-29 1h1m5 0h1m3 0h1m1 0h1m2 0h2m2 0h2m3 0h2m2 0h1m-29 1h1m1 0h3m1 0h1m1 0h3m3 0h1m1 0h1m2 0h6m-25 1h1m1 0h3m1 0h1m2 0h3m6 0h1m4 0h1m1 0h3m-28 1h1m1 0h3m1 0h1m2 0h1m2 0h2m1 0h1m1 0h5m4 0h3m-29 1h1m5 0h1m1 0h4m2 0h4m2 0h4m1 0h1m1 0h2m-29 1h7m4 0h1m1 0h1m2 0h2m2 0h3m1 0h2m1 0h1"/></svg></div>
+  <a class="url" href="https://dogoodpartybox.co.uk/">dogoodpartybox.co.uk</a>
+  <button class="send" id="send" type="button" hidden>Send the link instead</button>
+  </main>
+<script>
+  // Keep the screen awake while the code is on show, where the phone allows it.
+  (function(){
+    var lock=null;
+    function keep(){ try{ if(navigator.wakeLock){ navigator.wakeLock.request('screen').then(function(l){lock=l;}).catch(function(){}); } }catch(e){} }
+    keep();
+    document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible') keep(); });
+  })();
+  // Share sheet (WhatsApp, messages and so on) where available, otherwise copy the link.
+  (function(){
+    var btn=document.getElementById('send'), url='https://dogoodpartybox.co.uk/';
+    var canShare=false, canCopy=false;
+    try{ canShare=!!navigator.share; }catch(e){}
+    try{ canCopy=!!(navigator.clipboard&&navigator.clipboard.writeText); }catch(e){}
+    if(!canShare&&!canCopy) return;
+    btn.hidden=false;
+    btn.addEventListener('click',function(){
+      if(canShare){
+        navigator.share({title:'The Do Good Party Box',text:'Reusable kids party kits to hire',url:url}).catch(function(){});
+      }else{
+        navigator.clipboard.writeText(url).then(function(){ btn.textContent='Link copied'; setTimeout(function(){btn.textContent='Send the link instead';},2000); }).catch(function(){});
+      }
+    });
+  })();
+</script>
+</body>
+</html>
