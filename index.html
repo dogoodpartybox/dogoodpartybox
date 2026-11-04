@@ -252,21 +252,32 @@
   .kit-visual{
     background:var(--light);
     border-radius:16px;
-    padding:32px;
+    padding:20px;
     text-align:center;
-    min-height:auto;
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-    align-items:center;
   }
-  .kit-visual-icon{
-    font-size:2.5rem;
-    margin-bottom:12px;
+  .kit-photos{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+  }
+  .kit-photos figure{margin:0;}
+  .kit-photos img{
+    width:100%;
+    height:auto;
+    aspect-ratio:4/5;
+    object-fit:cover;
+    border-radius:12px;
+    display:block;
+  }
+  .kit-photos figcaption{
+    font-size:0.85rem;
+    font-weight:600;
+    margin-top:8px;
   }
   .kit-visual p{
     font-size:0.9rem;
     opacity:0.8;
+    margin-top:14px;
   }
 
   /* PRICING SECTION */
@@ -655,7 +666,16 @@
         </ul>
       </div>
       <div class="kit-visual">
-        <div class="kit-visual-icon">📋</div>
+        <div class="kit-photos">
+          <figure>
+            <img src="kit-bright.jpg" width="800" height="1000" loading="lazy" alt="The bright party box: a clear storage box packed with colourful cups, plates, a jug, bowls and a wipe clean table cloth">
+            <figcaption>Bright box</figcaption>
+          </figure>
+          <figure>
+            <img src="kit-pastel.jpg" width="800" height="1000" loading="lazy" alt="The pastel party box: a clear storage box packed with pastel cups, plates, a jug, bowls and a table cloth">
+            <figcaption>Pastel box</figcaption>
+          </figure>
+        </div>
         <p>Everything you need, nothing you don't</p>
       </div>
     </div>
